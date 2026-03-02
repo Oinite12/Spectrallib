@@ -1130,6 +1130,15 @@ Spectrallib.RarityChecks = (Cryptid and Cryptid.memepack) and { --using legacy s
   1, 2, 3, 4
 }
 
+function Card:is_playing_card()
+    if not G.deck or not self then return end
+    if self.area == G.play and self.ability.consumeable then return end
+    if (self.area == G.hand or self.area == G.play or self.area == G.discard) and (self.config.center.set == "Default" or self.config.center.set == "Enhanced") then return true end
+    for i, v in pairs(G.playing_cards) do
+        if v == self then return true end
+    end
+end
+
 Spectrallib.ReverseRarityChecks = {
 
 }
