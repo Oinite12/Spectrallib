@@ -61,8 +61,22 @@ return {
 			entr_card_suit_level = {
 				text = {
 					"--------------",
-					"{S:0.8,V:1}#1#{} {S:0.8}({S:0.8,V:2}lvl.#3#{})",
-					"{C:blue}+#2#{} Chips"
+					"{S:0.8,V:1}#1#{} {S:0.8}({S:0.8,V:2}lvl.#4#{})",
+					"{C:blue}+#2#{} Chips, {C:mult}+#3#{} Mult",
+				}
+			},
+			entr_card_suit_level_chips = {
+				text = {
+					"--------------",
+					"{S:0.8,V:1}#1#{} {S:0.8}({S:0.8,V:2}lvl.#4#{})",
+					"{C:blue}+#2#{} Chips",
+				}
+			},
+			entr_card_suit_level_mult = {
+				text = {
+					"--------------",
+					"{S:0.8,V:1}#1#{} {S:0.8}({S:0.8,V:2}lvl.#4#{})",
+					"{C:mult}+#3#{} Mult",
 				}
 			}
         }
@@ -122,6 +136,12 @@ return {
 			a_asc_minus = "#1# Asc",
 			a_exp_asc = "^#1# Asc",
 			a_exp_asc_minus = "-^#1# Asc"
+		},
+		suits_singular = {
+			suitless = "Suitless"
+		},
+		suits_plural = {
+			suitless = "Suitless"
 		}
     }
 }

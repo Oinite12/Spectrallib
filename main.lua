@@ -7,6 +7,16 @@ SMODS.Atlas {
 
 Spectrallib = {}
 
+SMODS.current_mod.reset_game_globals = function (run_start)
+    if run_start then
+        G.GAME.SuitBuffs = {}
+        for k in pairs(SMODS.Suits) do
+            G.GAME.SuitBuffs[k] = { level = 1, chips = 0, mult = 0 }
+        end
+        G.GAME.SuitBuffs.suitless = { level = 1, chips = 0, mult = 0 }
+    end
+end
+
 local files = {
 
     {path = "other_utils"},
