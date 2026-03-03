@@ -136,3 +136,12 @@ local get_mult_ref = Card.get_chip_mult
 function Card:get_chip_mult()
     return get_mult_ref(self) + self:get_suit_mult()
 end
+
+--default suit level functionality akin to `hand_type` config in vanilla
+local use_ref = Card.use_consumeable
+function Card:use_consumeable(area, copier)
+    use_ref(self, area, copier)
+    if self.ability.consumeable.level_suit then
+        Spectrallib.level_suit(self.ability.consumeable.level_suit, self, 1, self.ability.consumeable.suit_chips, self.ability.consumeable.suit_mult, nil, true)
+    end
+end
