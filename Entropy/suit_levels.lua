@@ -141,7 +141,9 @@ end
 local use_ref = Card.use_consumeable
 function Card:use_consumeable(area, copier)
     use_ref(self, area, copier)
+    local obj = self.config.center
+    if obj.use then return end
     if self.ability.consumeable.level_suit then
-        Spectrallib.level_suit(self.ability.consumeable.level_suit, self, 1, self.ability.consumeable.suit_chips, self.ability.consumeable.suit_mult, nil, true)
+        Spectrallib.level_suit(self.ability.consumeable.level_suit, self, 1, self.ability.consumeable.suit_chips or 0, self.ability.consumeable.suit_mult, nil, true)
     end
 end
