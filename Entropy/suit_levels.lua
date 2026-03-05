@@ -103,9 +103,9 @@ function Card:get_suit_bonus_table()
     for _, v in ipairs(SMODS.Suit.obj_buffer) do
         if self:is_suit(v) and (G.GAME.SuitBuffs[v].level ~= 1 or G.GAME.SuitBuffs[v].chips ~= 0 or G.GAME.SuitBuffs[v].mult ~= 0) then
             local loc_key
-            if G.GAME.SuitBuffs[v].chips == 0 then
+            if G.GAME.SuitBuffs[v].chips == 0 and G.GAME.SuitBuffs[v].mult ~= 0 then
                 loc_key = "entr_card_suit_level_mult"
-            elseif G.GAME.SuitBuffs[v].mult == 0 then
+            elseif G.GAME.SuitBuffs[v].mult == 0 and G.GAME.SuitBuffs[v].chips ~= 0 then
                 loc_key = "entr_card_suit_level_chips"
             else
                 loc_key = "entr_card_suit_level"
@@ -115,9 +115,9 @@ function Card:get_suit_bonus_table()
     end
     if Spectrallib.true_suitless(self) and (G.GAME.SuitBuffs.suitless.level ~= 1 or G.GAME.SuitBuffs.suitless.chips ~= 0 or G.GAME.SuitBuffs.suitless.mult ~= 0) then
         local loc_key
-        if G.GAME.SuitBuffs.suitless.chips == 0 then
+        if G.GAME.SuitBuffs.suitless.chips == 0 and G.GAME.SuitBuffs.suitless.mult ~= 0 then
             loc_key = "entr_card_suit_level_mult"
-        elseif G.GAME.SuitBuffs.suitless.mult == 0 then
+        elseif G.GAME.SuitBuffs.suitless.mult == 0 and G.GAME.SuitBuffs.suitless.chips ~= 0 then
             loc_key = "entr_card_suit_level_chips"
         else
             loc_key = "entr_card_suit_level"
