@@ -78,7 +78,27 @@ return {
 					"{S:0.8,V:1}#1#{} {S:0.8}({S:0.8,V:2}lvl.#4#{})",
 					"{C:mult}+#3#{} Mult",
 				}
-			}
+			},
+			slib_perma_e_chips = {
+				text = {
+					"{X:slib_echips,C:white}^#1#{} Chips"
+				}
+			},
+			slib_perma_h_e_chips = {
+				text = {
+					"{X:slib_echips,C:white}^#1#{} Chips while held"
+				}
+			},
+			slib_perma_e_mult = {
+				text = {
+					"{X:slib_emult,C:white}^#1#{} Mult"
+				}
+			},
+			slib_perma_h_e_mult = {
+				text = {
+					"{X:slib_emult,C:white}^#1#{} Mult while held"
+				}
+			},
         }
     },
     misc = {

@@ -215,7 +215,7 @@ match_indent = true
 
 [[patches]]
 [patches.pattern]
-target = '=[SMODS _ "src/utils.lua"]'
+target = 'card.lua'
 pattern = "perma_h_dollars = self.ability and self.ability.perma_h_dollars or 0,"
 position = "after"
 payload = """
@@ -229,6 +229,10 @@ slib_perma_x_asc = self.ability and self.ability.slib_perma_x_asc or 0,
 slib_perma_h_x_asc = self.ability and self.ability.slib_perma_h_x_asc or 0,
 slib_perma_exp_asc = self.ability and self.ability.slib_perma_exp_asc or 0,
 slib_perma_h_exp_asc = self.ability and self.ability.slib_perma_h_exp_asc or 0,
+slib_perma_e_chips = self.ability and self.ability.slib_perma_e_chips or 0,
+slib_perma_h_e_chips = self.ability and self.ability.slib_perma_h_e_chips or 0,
+slib_perma_e_mult = self.ability and self.ability.slib_perma_e_mult or 0,
+slib_perma_h_e_mult = self.ability and self.ability.slib_perma_h_e_mult or 0,
 """
 match_indent = true
 
@@ -249,6 +253,10 @@ slib_perma_h_x_asc = self.ability.slib_perma_h_x_asc ~= 0 and (self.ability.slib
 slib_perma_exp_asc = self.ability.slib_perma_exp_asc ~= 0 and (self.ability.slib_perma_exp_asc + 1) or nil,
 slib_perma_h_exp_asc = self.ability.slib_perma_h_exp_asc ~= 0 and (self.ability.slib_perma_h_exp_asc + 1) or nil,
 suit_bonus = self:get_suit_bonus_table(),
+slib_perma_e_chips = self.ability.slib_perma_e_chips ~= 0 and (self.ability.slib_perma_e_chips + 1) or nil,
+slib_perma_h_e_chips = self.ability.slib_perma_h_e_chips ~= 0 and (self.ability.slib_perma_h_e_chips + 1) or nil,
+slib_perma_e_mult = self.ability.slib_perma_e_mult ~= 0 and (self.ability.slib_perma_e_mult + 1) or nil,
+slib_perma_h_e_mult = self.ability.slib_perma_h_e_mult ~= 0 and (self.ability.slib_perma_h_e_mult + 1) or nil,
 """
 match_indent = true
 
@@ -292,6 +300,18 @@ end
 if specific_vars and specific_vars.slib_perma_h_exp_asc then
     localize{ type = "other", key = "slib_perma_h_exp_asc", nodes = desc_nodes, vars = {specific_vars.slib_perma_h_exp_asc}}
 end
+if specific_vars and specific_vars.slib_perma_e_chips then
+    localize{ type = "other", key = "slib_perma_e_chips", nodes = desc_nodes, vars = {specific_vars.slib_perma_e_chips}}
+end
+if specific_vars and specific_vars.slib_perma_h_e_chips then
+    localize{ type = "other", key = "slib_perma_h_e_chips", nodes = desc_nodes, vars = {specific_vars.slib_perma_h_e_chips}}
+end
+if specific_vars and specific_vars.slib_perma_e_mult then
+    localize{ type = "other", key = "slib_perma_e_mult", nodes = desc_nodes, vars = {specific_vars.slib_perma_e_mult}}
+end
+if specific_vars and specific_vars.slib_perma_h_e_mult then
+    localize{ type = "other", key = "slib_perma_h_e_mult", nodes = desc_nodes, vars = {specific_vars.slib_perma_h_e_mult}}
+end
 if specific_vars and specific_vars.suit_bonus and next(specific_vars.suit_bonus) then
     for _, v in ipairs(specific_vars.suit_bonus) do
         localize{ type = 'other', key = v.loc_key, nodes = desc_nodes, vars = {localize(v.key, 'suits_plural'), v.chips, v.mult, v.level, colours = {
@@ -329,6 +349,14 @@ local entr_exp_asc = card:get_slib_exp_asc()
 if entr_exp_asc ~= 1 then
     ret.playing_card.exp_asc = entr_exp_asc
 end
+local echips = card:get_slib_e_chips()
+if echips ~= 1 then
+    ret.playing_card.echips = echips
+end
+local emult = card:get_slib_e_mult()
+if emult ~= 1 then
+    ret.playing_card.emult = emult
+end
 '''
 match_indent = true
 
@@ -357,6 +385,14 @@ end
 local entr_exp_asc = card:get_slib_h_exp_asc()
 if entr_exp_asc ~= 1 then
     ret.playing_card.exp_asc = entr_exp_asc
+end
+local echips = card:get_slib_h_e_chips()
+if echips ~= 1 then
+    ret.playing_card.echips = echips
+end
+local emult = card:get_slib_h_e_mult()
+if emult ~= 1 then
+    ret.playing_card.emult = emult
 end
 '''
 match_indent = true

@@ -324,3 +324,19 @@ end
 function Card:get_slib_h_exp_asc()
 return self.ability.slib_perma_h_exp_asc + 1
 end
+
+function Card:get_slib_e_chips()
+return self.ability.slib_perma_e_chips + 1
+end
+
+function Card:get_slib_h_e_chips()
+return self.ability.slib_perma_h_e_chips + 1
+end
+
+function Card:get_slib_e_mult()
+return self.ability.slib_perma_e_mult + 1
+end
+
+function Card:get_slib_h_e_mult()
+return self.ability.slib_perma_h_e_mult + 1
+end
