@@ -602,6 +602,10 @@ function Spectrallib.is_big(x)
 	return (type(x) == "table" and is_number(x)) or (is_big and is_big(x))
 end
 
-function Cryptid.clamp(x, min, max)
+function Spectrallib.clamp(x, min, max)
     return math.max(min, math.min(x, max))
+end
+
+function Spectrallib.reset_to_none()
+	update_hand_text({delay = 0}, {mult = 0, chips = 0, handname = '', level = ''})
 end

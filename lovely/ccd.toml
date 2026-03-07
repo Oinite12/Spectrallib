@@ -215,7 +215,7 @@ match_indent = true
 
 [[patches]]
 [patches.pattern]
-target = "card.lua"
+target = '=[SMODS _ "src/utils.lua"]'
 pattern = "perma_h_dollars = self.ability and self.ability.perma_h_dollars or 0,"
 position = "after"
 payload = """
