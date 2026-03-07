@@ -100,7 +100,7 @@ end
 
 function Card:get_suit_bonus_table()
     local t = {}
-    (if not G.GAME.SuitBuffs then return t end)
+    if not G.GAME.SuitBuffs then return t end
     for _, v in ipairs(SMODS.Suit.obj_buffer) do
         if self:is_suit(v) and (G.GAME.SuitBuffs[v].level ~= 1 or G.GAME.SuitBuffs[v].chips ~= 0 or G.GAME.SuitBuffs[v].mult ~= 0) then
             local loc_key
