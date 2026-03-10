@@ -1137,6 +1137,7 @@ function Card:is_playing_card()
     for i, v in pairs(G.playing_cards) do
         if v == self then return true end
     end
+    if self.area and self.area.config.view_deck then return true end
 end
 
 Spectrallib.ReverseRarityChecks = {
