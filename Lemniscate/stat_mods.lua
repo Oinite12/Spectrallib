@@ -231,7 +231,7 @@ function Spectrallib.x_levels(args)
 
             for i, parameter in ipairs(SMODS.Scoring_Parameter.obj_buffer) do
                 if G.GAME.hands[hand][parameter] then
-                    uht_args[parameter] = G.GAME.hands[hand][parameter]
+                    uht_args[parameter] = "X" .. number_format(args.level_up)
                 end
             end
 
