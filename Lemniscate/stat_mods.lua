@@ -1,7 +1,7 @@
 --- Multiplies hands by `mod`
 --- @param mod number
---- @param instant boolean If true, triggers immediately instead of as an event.
---- @param silent boolean If true, does not play a sound effect.
+--- @param instant boolean? If true, triggers immediately instead of as an event.
+--- @param silent boolean? If true, does not play a sound effect.
 function Spectrallib.x_hands_played(mod, instant, silent)
     local _mod = function(mod)
         mod = mod or 1
@@ -36,8 +36,8 @@ end
 
 --- Multiplies hands by `mod`
 --- @param mod number
---- @param instant boolean If true, triggers immediately instead of as an event.
---- @param silent boolean If true, does not play a sound effect.
+--- @param instant boolean? If true, triggers immediately instead of as an event.
+--- @param silent boolean? If true, does not play a sound effect.
 function Spectrallib.x_discards(mod, instant, silent)
     local _mod = function(mod)
         mod = mod or 1
@@ -72,8 +72,8 @@ end
 
 --- Sets hands equal to `mod`
 --- @param mod number
---- @param instant boolean If true, triggers immediately instead of as an event.
---- @param silent boolean If true, does not play a sound effect.
+--- @param instant boolean? If true, triggers immediately instead of as an event.
+--- @param silent boolean? If true, does not play a sound effect.
 function Spectrallib.eq_hands(mod, instant, silent)
     local _mod = function(mod)
         mod = mod or 0
@@ -108,8 +108,8 @@ end
 
 --- Sets discards equal to `mod`
 --- @param mod number
---- @param instant boolean If true, triggers immediately instead of as an event.
---- @param silent boolean If true, does not play a sound effect.
+--- @param instant boolean? If true, triggers immediately instead of as an event.
+--- @param silent boolean? If true, does not play a sound effect.
 function Spectrallib.eq_discards(mod, instant, silent)
     local _mod = function(mod)
         mod = mod or 0
