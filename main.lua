@@ -39,6 +39,10 @@ local files = {
     {path = "Entropy/return_values", redirect = "Entropy"},
     {path = "Entropy/deck_redeeming", redirect = "Entropy"},
     {path = "Entropy/card_buttons", redirect = "Entropy"},
+
+    {path = "Lemniscate/utils", redirect = "Lemniscate"},
+    {path = "Lemniscate/math", redirect = "Lemniscate"},
+    {path = "Lemniscate/stat_mods", redirect = "Lemniscate"},
 }
 for i, v in pairs(files) do
     if v.redirect then

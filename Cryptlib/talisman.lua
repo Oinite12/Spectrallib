@@ -6,6 +6,14 @@ SMODS.Sound {
 	key = "echips",
 	path = "ExponentialChips.wav",
 }
+SMODS.Sound {
+	key = "eemult",
+	path = "TetrationalMult.wav",
+}
+SMODS.Sound {
+	key = "eechips",
+	path = "TetrationalChips.wav",
+}
 
 local add_exponentials = not (SMODS.Mods.Talisman or SMODS.Mods.cdataman or {}).can_load
 
@@ -79,10 +87,78 @@ if add_exponentials then
 			end
 			return true
 		end
+		if (key == "ee_chips" or key == "eechips" or key == "EEchip_mod") and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			local chips = SMODS.Scoring_Parameters["chips"]
+			chips:modify(Lemniscate.tetrate(chips.current, amount) - chips.current)
+			if not effect.remove_default_message then
+				if from_edition then
+					card_eval_status_text(
+						scored_card,
+						"jokers",
+						nil,
+						percent,
+						nil,
+						{ message = "^^" .. amount, colour = G.C.EDITION, edition = true }
+					)
+				elseif key ~= "EEchip_mod" then
+					if effect.eechip_message then
+						card_eval_status_text(
+							scored_card or effect.card or effect.focus,
+							"extra",
+							nil,
+							percent,
+							nil,
+							effect.eechip_message
+						)
+					else
+						card_eval_status_text(scored_card or effect.card or effect.focus, "ee_chips", amount, percent)
+					end
+				end
+			end
+			return true
+		end
+		if (key == "ee_mult" or key == "eemult" or key == "EEmult_mod") and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			local mult = SMODS.Scoring_Parameters["mult"]
+			mult:modify(Lemniscate.tetrate(mult.current, amount) - mult.current)
+			if not effect.remove_default_message then
+				if from_edition then
+					card_eval_status_text(
+						scored_card,
+						"jokers",
+						nil,
+						percent,
+						nil,
+						{ message = "^^" .. amount .. " " .. localize("k_mult"), colour = G.C.EDITION, edition = true }
+					)
+				elseif key ~= "EEmult_mod" then
+					if effect.eemult_message then
+						card_eval_status_text(
+							scored_card or effect.card or effect.focus,
+							"extra",
+							nil,
+							percent,
+							nil,
+							effect.eemult_message
+						)
+					else
+						card_eval_status_text(scored_card or effect.card or effect.focus, "ee_mult", amount, percent)
+					end
+				end
+			end
+			return true
+		end
 	end
 	for _, v in ipairs({
 		"e_mult", "emult", "Emult_mod",
 		"e_chips", "echips", "Echip_mod",
+		"ee_mult", "eemult", "EEmult_mod",
+		"ee_chips", "eechips", "EEchip_mod"
 	}) do
 		table.insert(SMODS.scoring_parameter_keys, v)
 	end

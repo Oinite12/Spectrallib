@@ -51,6 +51,20 @@ elseif eval_type == 'e_mult' and not (SMODS.Mods.Talisman or SMODS.Mods.cdataman
     colour = slib_emult
     config.type = 'fade'
     config.scale = 0.7
+elseif eval_type == 'ee_chips' and not (SMODS.Mods.Talisman or SMODS.Mods.cdataman or {}).can_load then
+    sound = 'slib_eechips'
+    amt = amt
+    text = '^^' .. number_format(amt) .. ' ' .. localize('k_chips')
+    colour = Spectrallib.echips
+    config.type = 'fade'
+    config.scale = 0.7
+elseif eval_type == 'ee_mult' and not (SMODS.Mods.Talisman or SMODS.Mods.cdataman or {}).can_load then
+    sound = 'slib_eemult'
+    amt = amt
+    text = '^^' .. number_format(amt) .. ' ' .. localize('k_mult')
+    colour = slib_emult
+    config.type = 'fade'
+    config.scale = 0.7
 '''
 match_indent = true
 
