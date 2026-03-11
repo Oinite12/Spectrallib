@@ -216,28 +216,8 @@ function Spectrallib.x_levels(args)
                     play_sound("slib_eemult")
                     if bb and bb.juice_up then bb:juice_up(0.8, 0.5) end
                     Spectrallib.pulse_flame(0.5, Spectrallib.clamp(0, to_number(G.GAME.hands[hand].level), 1e200))
+                    Spectrallib.pulse_scoring_window_colors(HEX("d74ff2"), 0.1, 0.7, 2.5)
                     G.TAROT_INTERRUPT_PULSE = nil
-
-                    -- not adding yet; this depends on a kinda janky hook
-                    -- makes the flame color change
-                    --for _, param in pairs(SMODS.Scoring_Parameters) do
-                    --    param:ease_colour(HEX("d74ff2"), 0.4)
-                    --end
-                    --ease_colour(G.C.UI_MULT, copy_table(G.C.GOLD), 0.2)
-
-                    --[[Lemniscate.event{
-                        function()
-                            for _, param in pairs(SMODS.Scoring_Parameters) do
-                                param:ease_colour(nil, 1)
-                            end
-                            return true
-                        end,
-                        trigger = "after",
-                        blockable = false,
-                        blocking = false,
-                        delay = 1.2,
-                    }]]
-
                     return true
                 end,
                 trigger = "after",
