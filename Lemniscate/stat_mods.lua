@@ -174,7 +174,7 @@ function Spectrallib.x_levels(args)
     end
 
     local displayed = false
-    local context = {modify_poker_hands = true, card = args.from, slib_x_levels = args.level_up}
+    local context = {poker_hand_changed = true, card = args.from, slib_x_levels = args.level_up}
     for _, hand in ipairs(args.hands) do
         displayed = hand == SMODS.displayed_hand
         local level = G.GAME.hands[hand].level
