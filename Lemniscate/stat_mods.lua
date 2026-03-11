@@ -150,6 +150,7 @@ function Spectrallib.x_levels(args)
     -- args.instant
     -- args.from
     -- args.bypass_calculate
+    -- args.colour
 
     assert(args, "No arguments given to Spectrallib.x_levels")
     assert(args.level_up, "Must provide amount to Spectrallib.x_levels")
@@ -225,7 +226,7 @@ function Spectrallib.x_levels(args)
             }
 
             local uht_args = {
-                StatusText = {cover_colour = HEX("d74ff2")},
+                StatusText = {cover_colour = args.colour or HEX("d74ff2")},
                 level = G.GAME.hands[hand].level,
             }
 
