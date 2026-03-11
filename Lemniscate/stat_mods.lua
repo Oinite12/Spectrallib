@@ -157,6 +157,9 @@ function Spectrallib.x_levels(args)
 
     args.hands = args.hands or G.handlist
     if type(args.hands) == 'string' then args.hands = {args.hands} end
+    if args.from and #args.from < 1 then
+        args.from = {args.from}
+    end
     local instant = args.instant or Spectrallib.should_skip_animations()
 
     local vals_after_level
@@ -201,7 +204,6 @@ function Spectrallib.x_levels(args)
         end
 
         if not instant then
-            local bb = args.from
             Spectrallib.event{
                 function()
                     G.TAROT_INTERRUPT_PULSE = true
@@ -215,7 +217,11 @@ function Spectrallib.x_levels(args)
                 function()
                     play_sound("slib_eechips")
                     play_sound("slib_eemult")
-                    if bb and bb.juice_up then bb:juice_up(0.8, 0.5) end
+                    if args.from then
+                        for _, v in ipairs(args.from) do
+                            if v and v.juice_up then v:juice_up(0.8, 0.5) end
+                        end
+                    end
                     Spectrallib.pulse_flame(0.5, Spectrallib.clamp(0, to_number(G.GAME.hands[hand].level), 1e200))
                     Spectrallib.pulse_scoring_window_colors(HEX("d74ff2"), 0.1, 0.7, 2.5)
                     G.TAROT_INTERRUPT_PULSE = nil
