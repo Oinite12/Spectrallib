@@ -92,7 +92,7 @@ if add_exponentials then
 				juice_card(effect.card)
 			end
 			local chips = SMODS.Scoring_Parameters["chips"]
-			chips:modify(Lemniscate.tetrate(chips.current, amount) - chips.current)
+			chips:modify(Spectrallib.tetrate(chips.current, amount) - chips.current)
 			if not effect.remove_default_message then
 				if from_edition then
 					card_eval_status_text(
@@ -125,7 +125,7 @@ if add_exponentials then
 				juice_card(effect.card)
 			end
 			local mult = SMODS.Scoring_Parameters["mult"]
-			mult:modify(Lemniscate.tetrate(mult.current, amount) - mult.current)
+			mult:modify(Spectrallib.tetrate(mult.current, amount) - mult.current)
 			if not effect.remove_default_message then
 				if from_edition then
 					card_eval_status_text(
