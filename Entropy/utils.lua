@@ -292,7 +292,6 @@ function Spectrallib.get_random_set(has_parakmi)
     return set
 end
 
---not really needed any more
 function Spectrallib.format_arrow_mult(arrows, mult)
     if arrows == "addition" then arrows = -1 end
     if arrows == "multiply" then arrows = 0 end
@@ -318,6 +317,11 @@ function Spectrallib.format_arrow_mult(arrows, mult)
     else
         return "{"..arrows.."}"..mult
     end
+end
+
+-- alias lemniscate used for this function
+function Spectrallib.format_arrow_value(...)
+    return Spectrallib.format_arrow_mult(...)
 end
 
 function Spectrallib.get_random_cards(areas, cardns, rpseudoseed, cond)
