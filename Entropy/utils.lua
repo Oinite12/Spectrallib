@@ -613,11 +613,11 @@ function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soul
         _type = (center.set ~= 'Default' and center.set or _type)
     else
         local _pool, _pool_key = get_current_pool(_type, _rarity, legendary, key_append)
-        center = pseudorandom_element(_pool, pseudoseed(_pool_key .. key_append))
+        center = pseudorandom_element(_pool, pseudoseed(_pool_key))
         local it = 1
         while center == 'UNAVAILABLE' do
             it = it + 1
-            center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it..key_append))
+            center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it))
         end
 
         center = G.P_CENTERS[center]
