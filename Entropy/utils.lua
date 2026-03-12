@@ -577,10 +577,9 @@ function Spectrallib.no_recurse_scoring(poker_hands)
     return text
 end
 
-function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi)
-    local area = area or G.jokers
+function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soulable, key_append)
     local center = G.P_CENTERS.b_red
-        
+    local forced_key
 
     --should pool be skipped with a forced key
     if not forced_key and soulable and (not G.GAME.banned_keys['c_soul']) then
@@ -614,11 +613,11 @@ function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi)
         _type = (center.set ~= 'Default' and center.set or _type)
     else
         local _pool, _pool_key = get_current_pool(_type, _rarity, legendary, key_append)
-        center = pseudorandom_element(_pool, pseudoseed(_pool_key))
+        center = pseudorandom_element(_pool, pseudoseed(_pool_key .. key_append))
         local it = 1
         while center == 'UNAVAILABLE' do
             it = it + 1
-            center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it))
+            center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it..key_append))
         end
 
         center = G.P_CENTERS[center]
