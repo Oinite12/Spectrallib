@@ -591,6 +591,38 @@ function Spectrallib.pulse_flame(duration, intensity) -- duration is in seconds,
 	G.cry_flame_override["intensity"] = intensity or 2
 end
 
+-- format: {UI color, original color}
+Spectrallib.scoring_window_pulse_targets = {
+	{G.C.UI_MULT, G.C.RED},
+	{G.C.UI_CHIPS, G.C.BLUE},
+}
+
+function Spectrallib.pulse_scoring_window_colors(new_color, fade_in, hold, fade_out)
+	fade_in = fade_in or 0.1
+	fade_out = fade_out or 1
+	hold = hold or 0
+
+	for _, v in ipairs(Spectrallib.scoring_window_pulse_targets) do
+		ease_colour(v[1], copy_table(new_color), fade_in)
+	end
+	-- TARGET: add more colors to pulse on
+
+	Spectrallib.event{
+		function()
+			for _, v in ipairs(Spectrallib.scoring_window_pulse_targets) do
+				ease_colour(v[1], v[2], fade_out)
+			end
+			-- TARGET: add more colors to pulse off
+
+			return true
+		end,
+		trigger = "after",
+		blockable = false,
+		blocking = false,
+		delay = fade_in + hold,
+	}
+end
+
 function Spectrallib.get_next_tag()
 
 end

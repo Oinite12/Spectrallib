@@ -292,7 +292,6 @@ function Spectrallib.get_random_set(has_parakmi)
     return set
 end
 
---not really needed any more
 function Spectrallib.format_arrow_mult(arrows, mult)
     if arrows == "addition" then arrows = -1 end
     if arrows == "multiply" then arrows = 0 end
@@ -318,6 +317,11 @@ function Spectrallib.format_arrow_mult(arrows, mult)
     else
         return "{"..arrows.."}"..mult
     end
+end
+
+-- alias lemniscate used for this function
+function Spectrallib.format_arrow_value(...)
+    return Spectrallib.format_arrow_mult(...)
 end
 
 function Spectrallib.get_random_cards(areas, cardns, rpseudoseed, cond)
@@ -577,10 +581,9 @@ function Spectrallib.no_recurse_scoring(poker_hands)
     return text
 end
 
-function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi)
-    local area = area or G.jokers
+function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soulable, key_append)
     local center = G.P_CENTERS.b_red
-        
+    local forced_key
 
     --should pool be skipped with a forced key
     if not forced_key and soulable and (not G.GAME.banned_keys['c_soul']) then
