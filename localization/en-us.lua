@@ -128,10 +128,11 @@ return {
 			b_tag = "Tag",
 			b_blind = "Blind",
 			k_mult = "Mult",
-			k_chips = "Chips",			
+			k_chips = "Chips",
 
 			cry_balanced_q = "Balanced...?",
-			slib_forcetrigger_ex = "Forcetrigger!"
+			slib_forcetrigger_ex = "Forcetrigger!",
+			slib_plus_consumable = "+1 Consumable",
         },
         v_dictionary = {
         	a_xchips = "X#1# Chips",
