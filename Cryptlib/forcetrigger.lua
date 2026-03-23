@@ -818,7 +818,7 @@ function Spectrallib.get_forcetrigger_results(card, context)
 					planets_used = planets_used + 1
 				end
 			end
-			ease_dollars(card.ability.extra * planets_used or 1)
+			ease_dollars(card.ability.extra * (planets_used or 1))
 		end
 		if card.ability.name == "Shoot The Moon" then
 			results = { jokers = { mult = 13, card = card } }
