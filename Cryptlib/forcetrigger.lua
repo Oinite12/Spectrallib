@@ -439,6 +439,7 @@ function Spectrallib.get_forcetrigger_results(card, context)
 			}))
 		end
 		if card.ability.name == "Vampire" then
+			local enhanced = {}
 			if context.scoring_hand and #context.scoring_hand > 0 then
 				for k, v in ipairs(context.scoring_hand) do
 					if v.config.center ~= G.P_CENTERS.c_base and not v.debuff and not v.vampired then
@@ -458,7 +459,7 @@ function Spectrallib.get_forcetrigger_results(card, context)
 					v.vampired = nil
 				end
 			end
-			card.ability.x_mult = card.ability.x_mult + (card.ability.extra * #enhanced or 1)
+			card.ability.x_mult = card.ability.x_mult + (card.ability.extra * (#enhanced or 1))
 			results = { jokers = { xmult = card.ability.x_mult, card = card } }
 		end
 		-- if card.ability.name == "Shortcut" then results = { jokers = { } } end
