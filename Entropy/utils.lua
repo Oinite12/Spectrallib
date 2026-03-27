@@ -893,7 +893,7 @@ function Spectrallib.reduce_cards(cards, card)
 end
 
 function Spectrallib.handle_card_limit(area, num)
-    area.config.card_limit = area.config.card_limit + num
+    area.config.card_limit = area.config.card_limit + (num or 0)
     area:handle_card_limit()
 end
 
