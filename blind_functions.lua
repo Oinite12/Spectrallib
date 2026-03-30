@@ -671,6 +671,7 @@ function Game:update(dt)
             G.GAME.round_resets.blind_states[c] ~= "Defeated"
             and not G.GAME.blind.disabled
             and G.GAME.chips < G.GAME.blind.chips
+            and G.GAME.blind:ante_base_mod(dt) > 0
         then
             G.GAME.blind.chips = G.GAME.blind.chips
                 + G.GAME.blind:ante_base_mod(dt)
@@ -684,6 +685,7 @@ function Game:update(dt)
             and G.GAME.blind
             and not G.GAME.blind.disabled
             and to_big(G.GAME.chips) < to_big(G.GAME.blind.chips)
+            and (G.GAME.blind:round_base_mod(dt) or 0) > 0
         then
             G.GAME.blind.chips = G.GAME.blind.chips
                 * (G.GAME.blind.round_base_mod and G.GAME.blind:round_base_mod(dt) or 1)
