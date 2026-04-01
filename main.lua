@@ -22,6 +22,7 @@ local files = {
     {path = "other_utils"},
     {path = "blind_functions"},
     {path = "modpage_ui"},
+    {path = "attributes"},
 
     {path = "Cryptlib/main", redirect = "Cryptid"},
     {path = "Cryptlib/talisman", redirect = "Cryptid"}, -- this is probably not needed with amulet existing but back compat so shrug
