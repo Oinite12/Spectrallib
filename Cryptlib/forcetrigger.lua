@@ -1006,6 +1006,12 @@ function Spectrallib.get_forcetrigger_results(card, context)
 	return results
 end
 
+---Forcetriggers a given card and calculates returned effects.
+---Provided `card` is the card to forcetrigger, `message_card` will display the forcetrigger message.
+---`message` and `colour` control the message displayed on `message_card`.
+---`silent` prevents the message from being displayed.
+---`context` holds additional context information and defaults to an empty table. `context.forcetrigger` will always be set to `true` when calculating the forcetrigger.
+---@param args table|{context?: table, card: Card, silent?: boolean, message_card: Card, colour?: table, message?: string}
 function Spectrallib.forcetrigger(args)
 	args.context = args.context or {}
 	if Cryptid.demicolonGetTriggerable(args.card)[1] then

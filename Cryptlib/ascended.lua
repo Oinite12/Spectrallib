@@ -179,7 +179,10 @@ function Spectrallib.ascend(num, curr2) -- edit this function at your leisure
     return num * (to_big((1.25 + snum)) ^ to_big(curr2))
 end
 
-function Spectrallib.pulse_flame(duration, intensity) -- duration is in seconds, intensity is in idfk honestly, but it increases pretty quickly
+---Pulses the flames on chips and mult temporarily
+---@param duration number duration of the pulse in seconds
+---@param intensity number intensity of the flames in idfk, it increases pretty quickly though
+function Spectrallib.pulse_flame(duration, intensity)
 	G.cry_flame_override = G.cry_flame_override or {}
 	G.cry_flame_override["duration"] = duration or 0.01
 	G.cry_flame_override["intensity"] = intensity or 2
