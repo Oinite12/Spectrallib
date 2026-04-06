@@ -555,14 +555,14 @@ function Spectrallib.after_play_copied_blinds(blinds, self)
 end
 
 local play_ref = G.FUNCS.play_cards_from_highlighted
-G.FUNCS.play_cards_from_highlighted = function(e)
+G.FUNCS.play_cards_from_highlighted = function(e, ...)
     G.GAME.blind:before_play()
-	play_ref(e)
+	play_ref(e, ...)
 end
 
 local gfep = G.FUNCS.evaluate_play
-function G.FUNCS.evaluate_play(e)
-	gfep(e)
+function G.FUNCS.evaluate_play(e, ...)
+	gfep(e, ...)
 	G.GAME.blind:after_play()
 end
 
