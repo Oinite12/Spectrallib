@@ -97,8 +97,8 @@ end
 
 local upgrade_hands_ref = SMODS.upgrade_poker_hands
 function SMODS.upgrade_poker_hands(args)
+    args.hands = args.hands or G.handlist
     if type(args.hands) == "string" then args.hands = {args.hands} end
-    if not args.hands then args.hands = {} end
     if next(SMODS.find_card("j_entr_strawberry_pie")) then
         for i, v in pairs(SMODS.find_card("j_entr_strawberry_pie")) do
             for index, hand in pairs(args.hands) do
