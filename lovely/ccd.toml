@@ -171,8 +171,8 @@ local slib_ret_rows = {
 }
 
 if not (SMODS.Mods["Cryptid"] or {}).can_load and AUT.ccd then
-    table.insert(ret_rows, 3, name_from_rows(AUT.ccd.name, G.C.WHITE))
-    table.insert(ret_rows, 4, desc_from_rows(AUT.ccd.main))
+    table.insert(slib_ret_rows, 3, name_from_rows(AUT.ccd.name, G.C.WHITE))
+    table.insert(slib_ret_rows, 4, desc_from_rows(AUT.ccd.main))
 end
 
 '''
