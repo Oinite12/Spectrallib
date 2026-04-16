@@ -187,7 +187,7 @@ if add_exponentials then
 				effect.update_score = true
 			end
 		end
-		--BLIND SIZE DOES NOT WORK someone please help why does it not work specifically the first time it happens in scoring edfjuhwueidhwqrhojuewhri
+		--blind size is untested (no time)
 		if key == "eblindsize" and amount ~= 1 then
 			if effect.card then
 				juice_card(effect.card)

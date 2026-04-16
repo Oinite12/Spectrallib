@@ -30,8 +30,7 @@ function Spectrallib.mod_score(amt) --good version
 end
 
 function Spectrallib.mod_blindsize(amt) --good version
-    local old = G.GAME.blind.chips
     G.BLIND_SIZE_DISPLAY_QUEUE = G.BLIND_SIZE_DISPLAY_QUEUE or {}
-    table.insert(G.BLIND_SIZE_DISPLAY_QUEUE,old)
+    table.insert(G.BLIND_SIZE_DISPLAY_QUEUE,amt)
     G.GAME.blind.chips = amt
 end
