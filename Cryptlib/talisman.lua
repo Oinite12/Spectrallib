@@ -153,6 +153,75 @@ if add_exponentials then
 			end
 			return true
 		end
+		if (key == "escore") and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			Spectrallib.mod_score(G.GAME.chips^amount)
+			if not effect.remove_default_message or effect.escore_message then
+				card_eval_status_text(
+					scored_card or effect.card or effect.focus,
+					from_edition and "jokers" or "extra",
+					nil,
+					percent,
+					nil,
+					{ message = effect.escore_message or localize{key="a_escore",vars={amount},type="variable"}, colour = effect.colour or from_edition and G.C.EDITION or G.C.PURPLE, update_score = true, sound = "xscore", edition = from_edition }) --needs sound
+			else
+				effect.update_score = true
+			end
+		end
+		if key == "eescore" and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			Spectrallib.mod_score(Spectrallib.tetrate(G.GAME.chips, amount))
+			if not effect.remove_default_message or effect.escore_message then
+				card_eval_status_text(
+					scored_card or effect.card or effect.focus,
+					from_edition and "jokers" or "extra",
+					nil,
+					percent,
+					nil,
+					{ message = effect.eescore_message or localize{key="a_eescore",vars={amount},type="variable"}, colour = effect.colour or from_edition and G.C.EDITION or G.C.PURPLE, update_score = true, sound = "xscore", edition = from_edition }) --needs sound
+			else
+				effect.update_score = true
+			end
+		end
+		--BLIND SIZE DOES NOT WORK someone please help why does it not work specifically the first time it happens in scoring edfjuhwueidhwqrhojuewhri
+		if key == "eblindsize" and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			Spectrallib.mod_blindsize(G.GAME.blind.chips^amount)
+			if not effect.remove_default_message or effect.eblindsize_message then
+				card_eval_status_text(
+					scored_card or effect.card or effect.focus,
+					from_edition and "jokers" or "extra",
+					nil,
+					percent,
+					nil,
+					{ message = effect.eblindsize_message or localize{key="a_eblindsize",vars={amount},type="variable"}, colour = effect.colour or from_edition and G.C.EDITION or G.C.DYN_UI.DARK, update_blind_size = true, sound = "xblindsize", edition = from_edition }) --needs sound
+			else
+				effect.update_blind_size = true
+			end
+		end
+		if key == "eeblindsize" and amount ~= 1 then
+			if effect.card then
+				juice_card(effect.card)
+			end
+			Spectrallib.mod_blindsize(Spectrallib.tetrate(G.GAME.blind.chips, amount))
+			if not effect.remove_default_message or effect.eblindsize_message then
+				card_eval_status_text(
+					scored_card or effect.card or effect.focus,
+					from_edition and "jokers" or "extra",
+					nil,
+					percent,
+					nil,
+					{ message = effect.eblindsize_message or localize{key="a_eeblindsize",vars={amount},type="variable"}, colour = effect.colour or from_edition and G.C.EDITION or G.C.DYN_UI.DARK, update_blind_size = true, sound = "xblindsize", edition = from_edition }) --needs sound
+			else
+				effect.update_blind_size = true
+			end
+		end
 	end
 	for _, v in ipairs({
 		"e_mult", "emult", "Emult_mod",
@@ -161,6 +230,9 @@ if add_exponentials then
 		"ee_chips", "eechips", "EEchip_mod"
 	}) do
 		table.insert(SMODS.scoring_parameter_keys, v)
+	end
+	for _, v in ipairs{"escore", "eescore", "eblindsize", "eeblindsize"} do
+		table.insert(SMODS.other_calculation_keys, v)
 	end
 	to_big = to_big or function(x) return x end
 	to_number = to_number or function(x) return x end

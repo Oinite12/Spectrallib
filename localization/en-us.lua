@@ -156,7 +156,11 @@ return {
 			a_asc = "+#1# Asc",
 			a_asc_minus = "#1# Asc",
 			a_exp_asc = "^#1# Asc",
-			a_exp_asc_minus = "-^#1# Asc"
+			a_exp_asc_minus = "-^#1# Asc",
+			a_escore = "^#1# Score",
+			a_eescore = "^^#1# Score",
+			a_eblindsize = "^#1# Blind Size",
+			a_eeblindsize = "^^#1# Blind Size"
 		},
 		suits_singular = {
 			suitless = "Suitless"
