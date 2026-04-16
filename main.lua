@@ -51,7 +51,13 @@ for i, v in pairs(files) do
         setmetatable(Spectrallib, {
             __newindex = function(table, key, value)
             rawset(table, key, value)
-            _G[v.redirect][key] = value
+            if type(value) == "function" then
+                _G[v.redirect][key] = function (...)
+                    return Spectrallib[key](...)
+                end
+            else
+                _G[v.redirect][key] = value
+            end
             end
         })
     end
