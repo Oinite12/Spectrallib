@@ -230,7 +230,7 @@ function create_UIBox_current_hand_row(handname, simple)
               {n=G.UIT.T, config={text = G.GAME.badarg[handname] and "BAD" or number_format(G.GAME.hands[handname].chips, 1000000), scale = 0.45, colour = G.C.UI.TEXT_LIGHT}},
               {n=G.UIT.B, config={w = 0.08, h = 0.01}}
             }},
-            {n=G.UIT.T, config={text = G.GAME.hands[handname].operator and Spectrallib.format_arrow_mulkt(G.GAME.hands[handname].operator, "") or "X", scale = 0.45, colour = Spectrallib.get_arrow_color(G.GAME.hands[handname].operator or 0)}},
+            {n=G.UIT.T, config={text = G.GAME.hands[handname].operator and Spectrallib.format_arrow_mult(G.GAME.hands[handname].operator, "") or "X", scale = 0.45, colour = Spectrallib.get_arrow_color(G.GAME.hands[handname].operator or 0)}},
             {n=G.UIT.C, config={align = "cl", padding = 0.01, r = 0.1, colour = G.GAME.badarg[handname] and HEX("FF0000") or G.C.MULT, minw = 1.1}, nodes={
               {n=G.UIT.B, config={w = 0.08,h = 0.01}},
               {n=G.UIT.T, config={text = G.GAME.badarg[handname] and "ARG" or number_format(G.GAME.hands[handname].mult, 1000000), scale = 0.45, colour = G.C.UI.TEXT_LIGHT}}
@@ -277,7 +277,7 @@ function create_UIBox_current_hand_row(handname, simple)
                 {n=G.UIT.T, config={text = G.GAME.badarg[handname] and "BAD" or number_format(Spectrallib.ascend_hand(G.GAME.hands[handname].chips,handname), 1000000), scale = 0.45, colour = G.C.UI.TEXT_LIGHT}},
                 {n=G.UIT.B, config={w = 0.08, h = 0.01}}
               }},
-              {n=G.UIT.T, config={text = G.GAME.hands[handname].operator and Spectrallib.format_arrow_mulkt(G.GAME.hands[handname].operator, "") or "X", scale = 0.45, colour = color}},
+              {n=G.UIT.T, config={text = G.GAME.hands[handname].operator and Spectrallib.format_arrow_mult(G.GAME.hands[handname].operator, "") or "X", scale = 0.45, colour = color}},
               {n=G.UIT.C, config={align = "cl", padding = 0.01, r = 0.1, colour = color, minw = 1.1}, nodes={
                 {n=G.UIT.B, config={w = 0.08,h = 0.01}},
                 {n=G.UIT.T, config={text = G.GAME.badarg[handname] and "ARG" or number_format(Spectrallib.ascend_hand(G.GAME.hands[handname].mult,handname), 1000000), scale = 0.45, colour = G.C.UI.TEXT_LIGHT}}

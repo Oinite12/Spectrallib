@@ -241,7 +241,7 @@ function SMODS.calculate_individual_effect(effect, scored_card, key, amount, fro
         SMODS.Scoring_Parameters.chips:modify(hand_chips * (Cryptid.ascend(1, G.GAME.asc_power_hand - orig) - 1))
         card_eval_status_text = e
         if not Spectrallib.should_skip_animations() then
-            Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'mult', amount, percent, nil, nil, Spectrallib.format_arrow_mulkt(amount[1], amount[2]).." Asc", Spectrallib.get_asc_colour(amount), "slib_solar", 0.6)
+            Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'mult', amount, percent, nil, nil, Spectrallib.format_arrow_mult(amount[1], amount[2]).." Asc", Spectrallib.get_asc_colour(amount), "slib_solar", 0.6)
         end 
         return true
     end
