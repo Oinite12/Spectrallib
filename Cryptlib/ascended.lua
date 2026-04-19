@@ -301,7 +301,7 @@ function Spectrallib.hand_ascension_numbers(hand_name, tether)
 	then
 		return 5
 	elseif hand_name == "Four of a Kind" then
-		return G.GAME.used_vouchers.v_cry_hyperspacetether and 4 or nil
+		return tether and 4 or nil
 	elseif hand_name == "cry_Clusterfuck" or hand_name == "cry_UltPair" then
 		return 8
 	elseif hand_name == "cry_WholeDeck" then
