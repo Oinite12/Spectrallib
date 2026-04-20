@@ -1,19 +1,23 @@
 -- everything demicolon needs (not really as simple anymore)
 function Spectrallib.demicolonGetTriggerable(card)
 	local n = { false, false }
-	if not card then
-		return n
-	end
-	if
-		card.config.center.demicoloncompat or card.config.center.demicolon_compat or card.config.center.forcetrigger_compat or Spectrallib.forcetriggerVanillaCheck(card)
-	then
+	if not card then return n end
+
+	if (
+		card.config.center.demicoloncompat
+		or card.config.center.demicolon_compat
+		or card.config.center.forcetrigger_compat
+		or Spectrallib.forcetriggerVanillaCheck(card)
+	) then
 		n[1] = true
 	else
 		n[1] = false
 	end
+
 	if card.ability.consumeable and Spectrallib.forcetriggerConsumableCheck(card) then
 		n[1] = true
 	end
+
 	return n
 end
 
@@ -24,339 +28,31 @@ function Card:calculate_joker(...)
 	return ret
 end
 
+---@param card Card
+---@param context table
+---@return table
 function Spectrallib.get_forcetrigger_results(card, context)
 	G.slib_copied_stack = G.slib_copied_stack or {}
 	if not card or Spectrallib.in_table(G.slib_copied_stack, card) then
 		return {}
 	end
-	G.slib_copied_stack[#G.slib_copied_stack+1] = card
+
+	table.insert(G.slib_copied_stack, card)
+
 	local results = {}
 	local check = Spectrallib.forcetriggerVanillaCheck(card)
+
 	if not check and card.ability.set == "Joker" then
 		local demicontext = SMODS.shallow_copy(context)
 		demicontext.forcetrigger = true
 		if card.config.center.forcetrigger then
-			results = {jokers = {
-
-			}}
 			results.jokers = card.config.center:forcetrigger(card, demicontext) or {}
-			results.jokers.card = card
-		elseif  card.config.center.calculate then
-			results = {jokers = {
-
-			}}
+		elseif card.config.center.calculate then
 			results.jokers = card.config.center:calculate(card, demicontext) or {}
-			results.jokers.card = card
 		end
+		results.jokers.card = card
 		demicontext = nil
 	elseif check and card.ability.set == "Joker" then
-		results = {}
-		results.jokers = {}
-		-- page 1
-		if card.ability.name == "Joker" then
-			results = { jokers = { mult = card.ability.mult, card = card } }
-		end
-		if card.ability.name == "Greedy Joker" then
-			results = { jokers = { mult = card.ability.extra.s_mult, card = card } }
-		end
-		if card.ability.name == "Lusty Joker" then
-			results = { jokers = { mult = card.ability.extra.s_mult, card = card } }
-		end
-		if card.ability.name == "Wrathful Joker" then
-			results = { jokers = { mult = card.ability.extra.s_mult, card = card } }
-		end
-		if card.ability.name == "Gluttonous Joker" then
-			results = { jokers = { mult = card.ability.extra.s_mult, card = card } }
-		end
-		if card.ability.name == "Jolly Joker" then
-			results = { jokers = { mult = card.ability.t_mult, card = card } }
-		end
-		if card.ability.name == "Zany Joker" then
-			results = { jokers = { mult = card.ability.t_mult, card = card } }
-		end
-		if card.ability.name == "Mad Joker" then
-			results = { jokers = { mult = card.ability.t_mult, card = card } }
-		end
-		if card.ability.name == "Crazy Joker" then
-			results = { jokers = { mult = card.ability.t_mult, card = card } }
-		end
-		if card.ability.name == "Droll Joker" then
-			results = { jokers = { mult = card.ability.t_mult, card = card } }
-		end
-		if card.ability.name == "Sly Joker" then
-			results = { jokers = { chips = card.ability.t_chips, card = card } }
-		end
-		if card.ability.name == "Wily Joker" then
-			results = { jokers = { chips = card.ability.t_chips, card = card } }
-		end
-		if card.ability.name == "Clever Joker" then
-			results = { jokers = { chips = card.ability.t_chips, card = card } }
-		end
-		if card.ability.name == "Devious Joker" then
-			results = { jokers = { chips = card.ability.t_chips, card = card } }
-		end
-		if card.ability.name == "Crafty Joker" then
-			results = { jokers = { chips = card.ability.t_chips, card = card } }
-		end
-		-- page 2
-		if card.ability.name == "Half Joker" then
-			results = { jokers = { mult = card.ability.extra.mult, card = card } }
-		end
-		if card.ability.name == "Joker Stencil" then
-			results = { jokers = { xmult = card.ability.x_mult, card = card } }
-		end
-		-- if card.ability.name == "Four Fingers" then results = { jokers = { }, } end
-		-- if card.ability.name == "Mime" then results = { jokers = { }, } end
-		-- if card.ability.name == "Credit Card" then results = { jokers = { }, } end
-		if card.ability.name == "Ceremonial Dagger" then
-			local my_pos = nil
-			for i = 1, #G.jokers.cards do
-				if G.jokers.cards[i] == card then
-					my_pos = i
-					break
-				end
-			end
-			if
-				my_pos
-				and G.jokers.cards[my_pos + 1]
-				and not card.getting_sliced
-				and not G.jokers.cards[my_pos + 1].ability.eternal
-				and not G.jokers.cards[my_pos + 1].getting_sliced
-			then
-				local sliced_card = G.jokers.cards[my_pos + 1]
-				sliced_card.getting_sliced = true
-				G.GAME.joker_buffer = G.GAME.joker_buffer - 1
-				G.E_MANAGER:add_event(Event({
-					func = function()
-						G.GAME.joker_buffer = 0
-						card.ability.mult = card.ability.mult + sliced_card.sell_cost * 2
-						card:juice_up(0.8, 0.8)
-						sliced_card:start_dissolve({ HEX("57ecab") }, nil, 1.6)
-						play_sound("slice1", 0.96 + math.random() * 0.08)
-						return true
-					end,
-				}))
-			end
-			results = { jokers = { mult = card.ability.mult, card = card } }
-		end
-		if card.ability.name == "Banner" then
-			results = { jokers = { chips = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Mystic Summit" then
-			results = { jokers = { mult = card.ability.extra.mult, card = card } }
-		end
-		if card.ability.name == "Marble Joker" then
-			G.E_MANAGER:add_event(Event({
-				trigger = "after",
-				delay = 0.4,
-				func = function()
-					local front = pseudorandom_element(G.P_CARDS, pseudoseed("marb_fr"))
-					G.playing_card = (G.playing_card and G.playing_card + 1) or 1
-					local card = Card(
-						G.play.T.x + G.play.T.w / 2,
-						G.play.T.y,
-						G.CARD_W,
-						G.CARD_H,
-						front,
-						G.P_CENTERS.m_stone,
-						{ playing_card = G.playing_card }
-					)
-					card:start_materialize({ G.C.SECONDARY_SET.Enhanced })
-					G.deck:emplace(card)
-					table.insert(G.playing_cards, card)
-					return true
-				end,
-			}))
-		end
-		if card.ability.name == "Loyalty Card" then
-			results = { jokers = { xmult = card.ability.extra.Xmult, card = card } }
-		end
-		if card.ability.name == "8 Ball" then
-			G.E_MANAGER:add_event(Event({
-				trigger = "after",
-				delay = 0.4,
-				func = function()
-					local card = create_card("Tarot", G.consumeables, nil, nil, nil, nil, nil, "8ba")
-					card:add_to_deck()
-					G.consumeables:emplace(card)
-					G.GAME.consumeable_buffer = 0
-					return true
-				end,
-			}))
-		end
-		if card.ability.name == "Misprint" then
-			results = { jokers = { mult = card.ability.extra.max, card = card } }
-		end
-		-- if card.ability.name == "Dusk" then results = { jokers = { }, } end
-		if card.ability.name == "Raised Fist" then
-			results = { jokers = { mult = 22, card = card } }
-		end
-		-- if card.ability.name == "Chaos the Clown" then results = { jokers = { }, } end
-		-- page 3
-		if card.ability.name == "Fibonacci" then
-			results = { jokers = { mult = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Steel Joker" then
-			results = { jokers = { xmult = (card.ability.extra + 1), card = card } }
-		end
-		if card.ability.name == "Scary Face" then
-			results = { jokers = { chips = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Abstract Joker" then
-			results = { jokers = { mult = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Delayed Gratification" then
-			results = { jokers = { dollars = card.ability.extra, card = card } }
-		end
-		-- if card.ability.name == "Hack" then results = { jokers = { }, } end
-		-- if card.ability.name == "Pareidolia" then results = { jokers = {  }, } end
-		if card.ability.name == "Gros Michel" then
-			G.E_MANAGER:add_event(Event({
-				func = function()
-					SMODS.destroy_cards(card, nil, nil, true)
-					return true
-				end,
-			}))
-			G.GAME.pool_flags.gros_michel_extinct = true
-			results = { jokers = { mult = card.ability.extra.mult, card = card } }
-		end
-		if card.ability.name == "Even Steven" then
-			results = { jokers = { mult = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Odd Todd" then
-			results = { jokers = { chips = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Scholar" then
-			results = { jokers = { chips = card.ability.extra.chips, mult = card.ability.extra.mult, card = card } }
-		end
-		if card.ability.name == "Business Card" then
-			ease_dollars(2)
-		end
-		if card.ability.name == "Supernova" then
-			local hand = context.other_context and context.other_context.scoring_name or context.scoring_name
-			if hand then
-				results = { jokers = { mult = G.GAME.hands[hand].played, card = card } }
-			end
-		end
-		if card.ability.name == "Ride The Bus" then
-			card.ability.mult = card.ability.mult + card.ability.extra
-			results = { jokers = { mult = card.ability.mult, card = card } }
-		end
-		if card.ability.name == "Space Joker" then
-			if #G.hand.highlighted > 0 then
-				local text, disp_text = G.FUNCS.get_poker_hand_info(G.hand.highlighted)
-				update_hand_text({ sound = "button", volume = 0.7, pitch = 0.8, delay = 0.3 }, {
-					handname = localize(text, "poker_hands"),
-					chips = G.GAME.hands[text].chips,
-					mult = G.GAME.hands[text].mult,
-					level = G.GAME.hands[text].level,
-				})
-				level_up_hand(card, text, nil, 1)
-				update_hand_text(
-					{ sound = "button", volume = 0.7, pitch = 1.1, delay = 0 },
-					{ mult = 0, chips = 0, handname = "", level = "" }
-				)
-			elseif context.scoring_name then
-				level_up_hand(card, context.scoring_name)
-			end
-		end
-		-- page 4
-		if card.ability.name == "Egg" then
-			card.ability.extra_value = card.ability.extra_value + card.ability.extra
-			card:set_cost()
-		end
-		if card.ability.name == "Burglar" then
-			G.E_MANAGER:add_event(Event({
-				func = function()
-					ease_discard(-G.GAME.current_round.discards_left, nil, true)
-					ease_hands_played(card.ability.extra)
-					return true
-				end,
-			}))
-		end
-		if card.ability.name == "Blackboard" then
-			results = { jokers = { xmult = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Runner" then
-			card.ability.extra.chips = card.ability.extra.chips + card.ability.extra.chip_mod
-			results = { jokers = { chips = card.ability.extra.chips, card = card } }
-		end
-		if card.ability.name == "Ice Cream" then
-			card.ability.extra.chips = card.ability.extra.chips - card.ability.extra.chip_mod
-			results = { jokers = { chips = card.ability.extra.chips, card = card } }
-			if card.ability.extra.chips - card.ability.extra.chip_mod <= 0 then
-				G.E_MANAGER:add_event(Event({
-					trigger = "after",
-					delay = 0.4,
-					func = function()
-						SMODS.destroy_cards(card, nil, nil, true)
-						return true
-					end,
-				}))
-			end
-		end
-		if card.ability.name == "DNA" and context.full_hand then
-			G.playing_card = (G.playing_card and G.playing_card + 1) or 1
-			local _card = copy_card(context.full_hand[1], nil, nil, G.playing_card)
-			_card:add_to_deck()
-			G.deck.config.card_limit = G.deck.config.card_limit + 1
-			table.insert(G.playing_cards, _card)
-			G.hand:emplace(_card)
-			_card.states.visible = nil
-
-			G.E_MANAGER:add_event(Event({
-				func = function()
-					_card:start_materialize()
-					return true
-				end,
-			}))
-		end
-		-- if card.ability.name == "Splash" then results = { jokers = { }, } end
-		if card.ability.name == "Blue Joker" then
-			results = { jokers = { chips = card.ability.extra, card = card } }
-		end
-		if card.ability.name == "Sixth Sense" then
-			G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
-			G.E_MANAGER:add_event(Event({
-				trigger = "after",
-				delay = 0.4,
-				func = function()
-					local card = create_card("Spectral", G.consumeables, nil, nil, nil, nil, nil, "sixth")
-					card:add_to_deck()
-					G.consumeables:emplace(card)
-					G.GAME.consumeable_buffer = 0
-					return true
-				end,
-			}))
-		end
-		if card.ability.name == "Constellation" then
-			card.ability.x_mult = card.ability.x_mult + card.ability.extra
-			results = { jokers = { xmult = card.ability.x_mult, card = card } }
-		end
-		-- if card.ability.name == "Hiker" then results = { jokers = { }, } end
-		if card.ability.name == "Faceless Joker" then
-			ease_dollars(card.ability.extra.dollars)
-		end
-		if card.ability.name == "Green Joker" then
-			results = { jokers = { mult = card.ability.mult, card = card } }
-		end
-		if card.ability.name == "Superposition" then
-			G.GAME.consumeable_buffer = G.GAME.consumeable_buffer + 1
-			G.E_MANAGER:add_event(Event({
-				trigger = "after",
-				delay = 0.4,
-				func = function()
-					local card = create_card("Tarot", G.consumeables, nil, nil, nil, nil, nil, "sup")
-					card:add_to_deck()
-					G.consumeables:emplace(card)
-					G.GAME.consumeable_buffer = 0
-					return true
-				end,
-			}))
-		end
-		if card.ability.name == "To Do List" then
-			ease_dollars(card.ability.extra.dollars)
-		end
 		-- page 5
 		if card.ability.name == "Cavendish" then
 			results = { jokers = { xmult = card.ability.extra.Xmult, card = card } }

@@ -113,7 +113,7 @@ end
 --Utility function to check things without erroring
 ---@param t table
 ---@param ... any
----@return table|false
+---@return table|any|false
 function Spectrallib.safe_get(t, ...)
 	local current = t
 	for _, k in ipairs({ ... }) do
@@ -585,7 +585,10 @@ function SMODS.injectItems(...)
         SMODS.ObjectTypes.RedeemableBacks:inject()
 end
 
-function Spectrallib.pulse_flame(duration, intensity) -- duration is in seconds, intensity is in idfk honestly, but it increases pretty quickly
+---Pulses the flames on chips and mult temporarily
+---@param duration number duration of the pulse in seconds
+---@param intensity number intensity of the flames in idfk, it increases pretty quickly though
+function Spectrallib.pulse_flame(duration, intensity)
 	G.cry_flame_override = G.cry_flame_override or {}
 	G.cry_flame_override["duration"] = duration or 0.01
 	G.cry_flame_override["intensity"] = intensity or 2
