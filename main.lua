@@ -14,6 +14,9 @@ SMODS.current_mod.reset_game_globals = function (run_start)
             G.GAME.SuitBuffs[k] = { level = 1, chips = 0, mult = 0 }
         end
         G.GAME.SuitBuffs.suitless = { level = 1, chips = 0, mult = 0 }
+        
+        -- Value Manipulation API
+        Spectrallib.base_values = {}
     end
 end
 
@@ -25,13 +28,15 @@ local files = {
     {path = "attributes"},
 
     {path = "Cryptlib/main", redirect = "Cryptid"},
+    {path = "Cryptlib/utilities", redirect = "Cryptid"},
     {path = "Cryptlib/talisman", redirect = "Cryptid"}, -- this is probably not needed with amulet existing but back compat so shrug
     {path = "Cryptlib/manipulate", redirect = "Cryptid"},
     {path = "Cryptlib/forcetrigger", redirect = "Cryptid"},
-    {path = "Cryptlib/utilities", redirect = "Cryptid"},
+    {path = "Cryptlib/forcetrigger__vanilladef", redirect = "Cryptid"},
     {path = "Cryptlib/content_sets", redirect = "Cryptid"},
     {path = "Cryptlib/ascended", redirect = "Cryptid"},
     {path = "Cryptlib/unredeem", redirect = "Cryptid"},
+    {path = "Cryptlib/unredeem__vanilladef", redirect = "Cryptid"},
     {path = "Cryptlib/colours"}, -- this doesn't have an equivalent in cryptid currently
 
     {path = "Entropy/utils", redirect = "Entropy"},
