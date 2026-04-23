@@ -13,6 +13,7 @@ local function spectrum_num()
         and next(SMODS.find_card("j_four_fingers"))
         and Spectrallib.gameset() ~= "modest"
         and 4
+        or 5
     )
 end
 
