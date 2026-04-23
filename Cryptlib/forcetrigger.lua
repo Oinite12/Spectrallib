@@ -168,12 +168,17 @@ function Spectrallib.get_forcetrigger_results(card, context)
 	return results
 end
 
+---@class Spectrallib.forcetrigger.args
+---@field context? table Has `context.forcetrigger == true`.
+---@field card? Card The card to perform the forcetrigger on.
+---@field silent? boolean If true, hides message.
+---@field message? string
+---@field colour? [number, number, number, number] Message color.
+---@field message_card? Card The card to display the forcetrigger message; may be distinct from `card`.
+
 ---Forcetriggers a given card and calculates returned effects.
----Provided `card` is the card to forcetrigger, `message_card` will display the forcetrigger message.
----`message` and `colour` control the message displayed on `message_card`.
----`silent` prevents the message from being displayed.
----`context` holds additional context information and defaults to an empty table. `context.forcetrigger` will always be set to `true` when calculating the forcetrigger.
----@param args table|{context?: table, card: Card, silent?: boolean, message_card: Card, colour?: table, message?: string}
+---@param args Spectrallib.forcetrigger.args|table
+---@return nil
 function Spectrallib.forcetrigger(args)
 	args.context = args.context or {}
 	local card_is_forcetriggerable = Spectrallib.demicolonGetTriggerable(args.card)[1]

@@ -236,12 +236,12 @@ function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 end
 
 ---@class Spectrallib.manipulate_value.args
----@field func function
----@field min number
----@field max number
----@field seed string|any
----@field type "+"|"X"|"^"|"hyper"
----@field value number|{arrows: number, height: number}
+---@field func? function
+---@field min? number
+---@field max? number
+---@field seed? string|any
+---@field type? "+"|"X"|"^"|"hyper"
+---@field value? number|{arrows: number, height: number}
 
 -- Calculate the manipulation of a given value.
 ---@param num number
