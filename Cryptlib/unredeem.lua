@@ -109,7 +109,7 @@ function Card:unredeem()
 end
 
 -- Remove a voucher and its effects from the run.
----@param center table
+---@param center? table
 ---@return nil
 function Card:unapply_to_run(center)
 	local center_table = {
