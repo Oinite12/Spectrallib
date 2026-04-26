@@ -1,3 +1,4 @@
+-- todo: not sure what to do with this, why is this needed? cryptlib already has this
 function Cryptid.get_highlighted_cards(areas, ignore, min, max, blacklist, seed)
 	ignore.checked = true
 	blacklist = blacklist or function()
@@ -55,100 +56,266 @@ function Spectrallib.get_highlighted_cards(cardareas, ignorecard, min, max, blac
 end
 if Entropy then Entropy.get_highlighted_cards = Spectrallib.get_highlighted_cards end --idk why this doesnt get redirected
 
-function Spectrallib.filter_table(table, func)
-    local temp = {}
-    for i, v in ipairs(table) do
-        if func(v, i) then
-            temp[#temp + 1] = v
+
+
+
+
+-------------------------------
+--#region INTERNAL UTILITIES --
+-------------------------------
+
+-- Generates a table that contains values fulfilling a certain condition.
+---@param tbl any[]
+---@param func fun(value: any, i: integer): boolean
+---@return any[]
+function Spectrallib.filter_table(tbl, func)
+    local ret = {}
+    for i, value in ipairs(tbl) do
+        if func(value, i) then
+            table.insert(ret, value)
         end
     end
-    return temp
+    return ret
 end
 
-function Spectrallib.flip_then(cardlist, func, before, after)
-    if not Spectrallib.should_skip_animations() then
-        for i, v in ipairs(cardlist) do
-            local card = cardlist[i]
-            if card then
-                G.E_MANAGER:add_event(
-                    Event(
-                        {
-                            trigger = "after",
-                            delay = 0.4,
-                            func = function()
-                                if before then
-                                    before(card)
-                                end
-                                if card.flip then
-                                    card:flip()
-                                end
-                                return true
-                            end
-                        }
-                    )
-                )
-            end
-        end
+Spectrallib.charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~#$^~#$^~#$^~#$^~#$^"
+-- Generates a string of random characters.
+---@param length integer
+---@param charset? string
+---@return string
+function Spectrallib.string_random(length, charset)
+    charset = charset or Spectrallib.charset
+    local total = ""
+    for _ = 0, length do
+        local val = math.random(1, #charset)
+        total = total .. charset:sub(val, val)
+    end
+    return total
+end
+
+-- Inserts a dollar sign to the given value.
+---@param val number
+---@return string
+function Spectrallib.format_dollar_value(val)
+    if val >= 0 then
+        return localize("$")..val
     else
-        if before then
-            before(card)
-        end
+        return "-"..localize("$")..(-val)
     end
-    for i, v in ipairs(cardlist) do
-        local card = cardlist[i]
-        if card then
-            if type(func) ~= "table" then
-                func = {{func = func, delay = 0.5}}
-            end
-            for i, v in pairs(func) do
-                G.E_MANAGER:add_event(
-                    Event(
-                        {
-                            trigger = "after",
-                            delay = v.delay,
-                            func = function()
-                                v.func(card, cardlist, i)
-                                return true
-                            end
-                        }
-                    )
-                )
-            end
-        end
-    end
-    if not Spectrallib.should_skip_animations() then
-        for i, v in ipairs(cardlist) do
-            local card = cardlist[i]
-            if card then
-                G.E_MANAGER:add_event(
-                    Event(
-                        {
-                            trigger = "after",
-                            delay = 0.4,
-                            func = function()
-                                if card.flip then
-                                    card:flip()
-                                end
-                                if after then
-                                    after(card)
-                                end
-                                return true
-                            end
-                        }
-                    )
-                )
-            end
-        end
-    else    
-        if after then
-            after(card)
+end
+
+-- Checks if a value is contained in a table; returns the index of said item if inside table.
+---@param tbl any[]
+---@param find_val fun(val: any): boolean | any If this is a function, the function checks each individual item in the table.
+---@return integer|nil
+function Spectrallib.in_table(tbl, find_val)
+    for i, value in ipairs(tbl) do
+        if (
+            type(find_val) == "function"
+            and find_val(value)
+            or value == find_val
+        ) then
+            return i
         end
     end
 end
 
+-- Formats hyperoperators.
+---@param arrows integer|string
+---|-2               # Operator set to =
+---|-1               # Operator set to +
+---|"addition"       # Operator set to +
+---|0                # Operator set to X
+---|"multiplication" # Operator set to X
+---|1                # From 1-6, operator set to ^ (repeats `arrow` times)
+---|"exponent"       # Operator set to ^
+---|7                # From 7 and higher or -3 and lower, operator set to {`arrow`}
+---@param mult number|string
+function Spectrallib.format_arrow_mult(arrows, mult)
+    if arrows == "addition" then arrows = -1 end
+    if arrows == "multiply" then arrows = 0 end
+    if arrows == "exponent" then arrows = 1 end
+    if type(arrows) == "string" then arrows = 0 end
+    mult = type(mult) ~= "string" and number_format(mult) or mult
+
+    local operator = ("{%s}"):format(arrows)
+
+    if arrows == -2 then
+        operator = "="
+    elseif arrows == -1 then
+        operator = "+"
+    elseif arrows == 0 then
+        operator = "X"
+    elseif 1 <= arrows or arrows <= 6 then
+        operator = ("^"):rep(arrows)
+    end
+
+    return operator .. mult
+end
+
+-- alias lemniscate used for this function
+function Spectrallib.format_arrow_value(...)
+    return Spectrallib.format_arrow_mult(...)
+end
+
+-- todo: what is this for?
+---@param orig? number
+---@param new number
+---@param etype string
+---@return number
+function Spectrallib.stack_eval_returns(orig, new, etype)
+    local valid_keys = Spectrallib.list_to_keys({
+        "Xmult", "x_mult", "Xmult_mod",
+        "Xchips", "Xchip_mod", "x_asc",
+        "Emult_mod", "Echip_mod"
+    })
+
+    if valid_keys[etype] then
+        return (orig or 1) * new
+    else
+        return (orig or 0) + new
+    end
+end
+
+-- Split a string into its characters.
+---@param s string
+---@return string[]
+function Spectrallib.stringsplit(s)
+    local tbl = {}
+    for i = 1, #s do
+        table.insert(tbl, s:sub(i,i))
+    end
+    return tbl
+end
+
+-- Approximates a repeated application of the log function.
+---@param orig number
+---@param base number The base of the log function.
+---@param iter integer The number of times to apply the log function.
+---@return number
+function Spectrallib.approximate_log_recursion(orig, base, iter)
+    if iter < 1000 then
+        if orig < base then return orig end
+        local result = orig
+        for _ = 1, to_number(iter) do
+            result = result * math.log(result, base)
+        end
+        return result
+    else
+        local m = iter/math.log(base)
+        local l1 = math.log(m)
+        local l2 = math.log(l1)
+        local E = iter * (l1 + l2 - 1 + ((l2-2)/l1))
+        local result = 2.718281846 ^ E
+        return result
+    end
+end
+
+-- Get a random element from a table, with the option to blacklist certain values.
+---@param tbl table
+---@param seed string|any
+---@param blacklist fun(elem: any): (boolean|any) If truthy, element is excluded.
+---@return any
+function Spectrallib.pseudorandom_element(tbl, seed, blacklist)
+    local elem = pseudorandom_element(tbl, seed)
+    local tries = 0
+    while blacklist(elem) and tries < 100 do
+        elem = pseudorandom_element(tbl, seed)
+        tries = tries + 1
+    end
+    return elem
+end
+
+--#endregion
+-------------------------------
+
+----------------------------------
+--#region GAMEPLAY MODIFICATION --
+----------------------------------
+
+---@alias Spectrallib.flip_then.func fun(card: Card, cardlist: Card[], i: integer): any
+
+-- Double-flips cards in the provided list, and also run functions before, during, and after double-flipping.
+---@param cardlist Card[]
+---@param func {func: Spectrallib.flip_then.func, delay: number}[] | Spectrallib.flip_then.func The functions to run on a card between flips.
+---@param before fun(card: Card): any The function to run on a card before flipping once.
+---@param after fun(card: Card): any The function to run on a card after flipping again.
+---@return nil
+function Spectrallib.flip_then(cardlist, func, before, after)
+    local skipanims = Spectrallib.should_skip_animations()
+    if type(func) ~= "table" then
+        func = {{func = func, delay = 0.5}}
+    end
+
+    for _,card in ipairs(cardlist) do
+        if not card then
+            -- Skip the following
+        elseif skipanims then
+            if before then before(card) end
+        else
+            G.E_MANAGER:add_event(Event({
+                trigger = "after",
+                delay = 0.4,
+                func = function()
+                    if before then before(card) end
+                    if card.flip then card:flip() end
+                    return true
+                end
+            }))
+        end
+    end
+
+    for _,card in ipairs(cardlist) do
+        if card then
+            for i, func_def in ipairs(func) do
+                G.E_MANAGER:add_event(Event({
+                    trigger = "after",
+                    delay = func_def.delay,
+                    func = function()
+                        func_def.func(card, cardlist, i)
+                        return true
+                    end
+                }))
+            end
+        end
+    end
+
+    for _,card in ipairs(cardlist) do
+        if not card then
+            -- Skip the following
+        elseif skipanims then
+            if after then after(card) end
+        else
+            G.E_MANAGER:add_event(Event({
+                trigger = "after",
+                delay = 0.4,
+                func = function()
+                    if card.flip then card:flip() end
+                    if after then after(card) end
+                    return true
+                end
+            }))
+        end
+    end
+end
+
+---@class Spectrallib.modify_hand_card.modifications
+---@field suit? Suits|string
+---@field rank? Ranks|string
+---@field enhancement? string
+---@field edition? string|table
+---@field seal? string
+---@field sticker? string
+---@field extra? table
+
+-- Generates a function that modifies a list of cards according to given specifications.
+---@param modifications Spectrallib.modify_hand_card.modifications
+---@param cards Card[]
+---@param dont_flip? boolean If true, cards will not be flipped on modification.
+---@return fun(self: any, card: Card): nil
 function Spectrallib.modify_hand_card(modifications, cards, dont_flip)
     local func = function(mcard)
-    if modifications.suit or modifications.rank then
+        if modifications.suit or modifications.rank then
             SMODS.change_base(mcard, modifications.suit, modifications.rank)
         end
         if modifications.enhancement then
@@ -168,16 +335,18 @@ function Spectrallib.modify_hand_card(modifications, cards, dont_flip)
             Spectrallib.apply_sticker(mcard, modifications.sticker)
         end
         if modifications.extra then
-            for i, v in pairs(modifications.extra) do mcard.ability[i] = v end
+            for extra_key, value in pairs(modifications.extra) do
+                mcard.ability[extra_key] = value
             end
+        end
     end
+
     return function(self, card)
+        local cardlist = cards or Spectrallib.get_highlighted_cards({G.hand}, {}, 1, card.ability.highlighted or 1)
         if not dont_flip then
-            Spectrallib.flip_then(cards or Spectrallib.get_highlighted_cards({G.hand}, {}, 1, card.ability.highlighted or 1), function(mcard)
-                func(mcard)
-            end)
+            Spectrallib.flip_then(cardlist, func)
         else
-            for i, mcard in pairs(cards or Spectrallib.get_highlighted_cards({G.hand}, {}, 1, card.ability.highlighted or 1)) do
+            for _, mcard in pairs(cardlist) do
                 G.E_MANAGER:add_event(Event({
                     delay = 0,
                     func = function()
@@ -190,221 +359,195 @@ function Spectrallib.modify_hand_card(modifications, cards, dont_flip)
     end
 end
 
+-- Generates a function that modifies a list of cards according to given specifications. Cards will not be flipped on modification.
+---@param modifications Spectrallib.modify_hand_card.modifications
+---@param cards Card[]
+---@return fun(self: any, card: Card): nil
 function Spectrallib.modify_hand_card_NF(modifications, cards)
     return Spectrallib.modify_hand_card(modifications, cards, true)
 end
 
-function Spectrallib.find_previous_in_pool(item, pool, ignore)
-    for i, v in pairs(G.P_CENTER_POOLS[pool]) do
-        if G.P_CENTER_POOLS[pool][i].key == item then
+-- Forcetrigger a random card.
+---@param card Card The card causing the forcetriggering.
+---@param count integer
+---@param context table
+---@return nil
+function Spectrallib.random_forcetrigger(source_card, count, context)
+    local searched_areas = {G.jokers, G.hand, G.consumeables, G.play}
+    local random_condition = function(cardd)
+        return not cardd.edition or cardd.edition.key ~= "e_entr_fractured"
+    end
+    local cards = Spectrallib.get_random_cards(searched_areas, count, "fractured", random_condition)
+
+    for _, card in pairs(cards) do
+        if card.base.id and (not card.edition or card.edition.key ~= "e_entr_fractured") then
+            for _,area in ipairs({G.play, G.hand}) do
+                local results = eval_card(card, {cardarea=area, main_scoring=true, forcetrigger=true, individual=true})
+                for _, result_group in pairs(results or {}) do
+                    if type(result_group) == "table" then
+                        for effect_key, result in pairs(result_group) do
+                            SMODS.calculate_individual_effect({[effect_key] = result}, source_card, effect_key, result, false)
+                        end
+                    end
+                end
+            end
+            card_eval_status_text( card,"extra", nil, nil, nil, { message = localize("cry_demicolon"), colour = G.C.GREEN })
+        elseif not card.edition or card.edition.key ~= "e_entr_fractured" then
+            Spectrallib.forcetrigger({card = card, context = context, mesasge_card = source_card})
+        end
+    end
+end
+
+-- Change the enhancement of all cards in the provided card areas.
+---@param areas CardArea[]|Card[]
+---@param enhancement_key string Key of the enhancement to transform into.
+---|"null" Destroy all cards that meet requirements.
+---|"ccd" Do completely nothing.
+---@param required string Key of the enhancement of cards to transform. If nil, all cards will be transformed.
+---@return nil
+function Spectrallib.change_enhancements(areas, enhancement_key, required)
+    for i, area in pairs(areas) do
+        if not area.cards then 
+            areas[i] = {cards = {area}}
+        end
+    end
+
+    for _,area in pairs(areas) do
+        for _, card in pairs(area.cards) do
+            if not required or (card.config and card.config.center.key == required) then
+                if enhancement_key == "null" then
+                    card:start_dissolve()
+                elseif enhancement_key == "ccd" then
+                    -- Do nothing
+                else
+                    card:set_ability(G.P_CENTERS[enhancement_key])
+                    card:juice_up()
+                end
+            end
+        end
+    end
+end
+
+---@param card Card
+---@param sticker_key string
+---@return nil
+function Spectrallib.apply_sticker(card, sticker_key)
+    local sticker = SMODS.Stickers[sticker_key]
+    if not sticker then return end
+    if not card.ability then card.ability = {} end
+
+    card.ability[sticker_key] = true
+    if sticker.apply then
+        sticker.apply(sticker, card)
+    end
+end
+
+---@param mod number Added to current play limit.
+---@param stroverride string The label to display for the play limit.
+---@return nil
+function Spectrallib.change_play_limit_no_bs(mod,stroverride)
+    if SMODS.hand_limit_strings then
+        G.GAME.starting_params.play_limit = (G.GAME.starting_params.play_limit or 5) + mod
+        G.hand.config.highlighted_limit = math.max(G.GAME.starting_params.discard_limit or 5, G.GAME.starting_params.play_limit or 5)
+        local str = stroverride or G.GAME.starting_params.play_limit or ""
+        SMODS.hand_limit_strings.play = G.GAME.starting_params.play_limit ~= 5 and localize('b_limit') .. str  or ''
+    else
+        G.hand.config.highlighted_limit = G.hand.config.highlighted_limit + mod
+    end
+end
+
+---@param mod number Added to current play limit.
+---@param stroverride string The label to display for the discard limit.
+---@return nil
+function Spectrallib.change_discard_limit_no_bs(mod,stroverride)
+    G.GAME.starting_params.discard_limit = (G.GAME.starting_params.discard_limit or 5) + mod
+    G.hand.config.highlighted_limit = math.max(G.GAME.starting_params.discard_limit or 5, G.GAME.starting_params.play_limit or 5)
+    local str = stroverride or G.GAME.starting_params.discard_limit or ""
+    SMODS.hand_limit_strings.discard = G.GAME.starting_params.discard_limit ~= 5 and localize('b_limit') .. str or ''
+end
+
+---@param mod number Added to current play limit.
+---@param stroverride string The label to display for the play and discard limit.
+---@return nil
+function Spectrallib.change_selection_limit(mod,stroverride)
+    if not SMODS.hand_limit_strings then SMODS.hand_limit_strings = {} end
+    Spectrallib.change_play_limit_no_bs(mod,stroverride)
+    if SMODS.hand_limit_strings then
+        Spectrallib.change_discard_limit_no_bs(mod,stroverride)
+    end
+end
+
+--#endregion
+----------------------------------
+
+----------------------------
+--#region OBJECT CHECKING --
+----------------------------
+
+-- Get the previous item in a pool before a given item.
+---@param item_key string Key of the item to check predecessor of.
+---@param pool_name string
+---@param ignore? integer When iterating through the pool, this value corresponds to the index to ignore.
+---@return string|nil
+function Spectrallib.find_previous_in_pool(item_key, pool_name, ignore)
+    local select_pool = G.P_CENTER_POOLS[pool_name]
+    for i in pairs(select_pool) do
+        if select_pool[i].key == item_key then
             local ind = i - 1
-            while G.GAME.banned_keys[G.P_CENTER_POOLS[pool][ind].key] or G.P_CENTER_POOLS[pool][ind].no_doe or ind == ignore do
+            while (
+                G.GAME.banned_keys[select_pool[ind].key]
+                or select_pool[ind].no_doe
+                or ind == ignore
+            ) do
                 ind = ind - 1
             end
-            return G.P_CENTER_POOLS[pool][ind].key
+            return select_pool[ind].key
         end
     end
     return nil
 end
 
-Spectrallib.charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~#$^~#$^~#$^~#$^~#$^"
-function Spectrallib.string_random(length, charset) 
-    local total = ""
-    for i = 0, length do
-        local val = math.random(1,charset and #charset or #Spectrallib.charset)
-        total = total..((charset or Spectrallib.charset):sub(val, val))
-    end
-    return total
-end
-
-function Spectrallib.format_dollar_value(val)
-    if to_big(val) >= to_big(0) then
-        return localize("$")..val
-    else
-        return "-"..localize("$")..(-val)
-    end
-end
-
-function Spectrallib.in_table(table, val)
-    for i, v in ipairs(table) do if type(val) == "function" and val(v) or v == val then return i end end
-end
-
+-- Given the rarity rank list `Spectrallib.RarityChecks`, get the rarity higher than the given rarity.<br>
+-- If such does not exist, return the given rarity.
+---@param rarity integer|string
+---@return integer|string
 function Spectrallib.get_next_rarity(rarity)
     if rarity == "entr_reverse_legendary" then return "cry_exotic" end
-    for i, v in pairs(Spectrallib.RarityChecks) do
-        if v == rarity then return Spectrallib.RarityChecks[i+1] or v end
+    for i, next_rarity in pairs(Spectrallib.RarityChecks) do
+        if next_rarity == rarity then
+            return Spectrallib.RarityChecks[i+1] or next_rarity
+        end
     end
     return rarity
 end
 
-function Spectrallib.get_higher_voucher_tier(voucher_key)
-    for i, v in pairs(G.P_CENTER_POOLS.Voucher) do
-        if Spectrallib.in_table(v.requires or {}, voucher_key) then return v.key end
+-- Given the rarity rank list `Spectrallib.RarityChecks`, check if a rarity is lower than another rarity.
+---@param check integer|string
+---@param threshold integer|string
+---@param check_greater_than boolean If true, the comparison is based on greater-than (<) instead of greater-than/equal (<=).
+function Spectrallib.rarity_above(check, threshold, check_greater_than)
+    if not Spectrallib.ReverseRarityChecks[check] then
+        Spectrallib.ReverseRarityChecks[check] = 1
     end
-end
-
-function Spectrallib.random_forcetrigger(card, num,context)
-    local res = { }
-    local cards = Spectrallib.get_random_cards({G.jokers, G.hand, G.consumeables, G.play}, num, "fractured", function(card) return not card.edition or card.edition.key ~= "e_entr_fractured" end)
-    for i, v in pairs(cards) do
-        if v.base.id and (not v.edition or v.edition.key ~= "e_entr_fractured") then
-            local results = eval_card(v, {cardarea=G.play,main_scoring=true, forcetrigger=true, individual=true}) or {}
-            if results then
-                for i, v2 in pairs(results) do
-                    for i2, result in pairs(type(v2) == "table" and v2 or {}) do
-                        SMODS.calculate_individual_effect({[i2] = result}, card, i2, result, false)
-                    end
-                end
-            end
-            local results = eval_card(v, {cardarea=G.hand,main_scoring=true, forcetrigger=true, individual=true}) or {}
-            if results then
-                for i, v2 in pairs(results) do
-                    for i2, result in pairs(type(v2) == "table" and v2 or {}) do
-                        SMODS.calculate_individual_effect({[i2] = result}, card, i2, result, false)
-                    end
-                end
-            end
-            card_eval_status_text(
-                v,
-                "extra",
-                nil,
-                nil,
-                nil,
-                { message = localize("cry_demicolon"), colour = G.C.GREEN }
-            )
-        else
-            if (not v.edition or v.edition.key ~= "e_entr_fractured") then
-                Spectrallib.forcetrigger({
-                    card = v, context = context, mesasge_card = card
-                })
-            end
-        end
+    if not Spectrallib.ReverseRarityChecks[threshold] then
+        Spectrallib.ReverseRarityChecks[threshold] = 1
     end
-end
-
-function Spectrallib.get_random_set(has_parakmi)
-    local pool = pseudorandom_element(G.P_CENTER_POOLS, pseudoseed(has_parakmi and "parakmi" or "chaos"))
-    local set = pool and pool[1] and G.P_CENTERS[pool[1].key] and pool[1].set
-    while not set or Spectrallib.ParakmiBlacklist[set] or (not has_parakmi and Spectrallib.ChaosBlacklist[set]) do
-        pool = pseudorandom_element(G.P_CENTER_POOLS, pseudoseed(has_parakmi and "parakmi" or "chaos"))
-        set = pool and pool[1] and G.P_CENTERS[pool[1].key] and pool[1].set
+    if check_greater_than then
+        return Spectrallib.ReverseRarityChecks[check] < Spectrallib.ReverseRarityChecks[threshold]
     end
-    return set
-end
-
-function Spectrallib.format_arrow_mult(arrows, mult)
-    if arrows == "addition" then arrows = -1 end
-    if arrows == "multiply" then arrows = 0 end
-    if arrows == "exponent" then arrows = 1 end
-    if type(arrows) == "string" then arrows = 0 end
-    mult = type(mult) ~= "string" and number_format(mult) or mult
-    if to_big(arrows) <= to_big(-2.01) then
-        return "{"..arrows.."}"..mult
-    end
-    if to_big(arrows) < to_big(-1.1) then 
-        return "="..mult 
-    elseif to_big(arrows) < to_big(-0.1) then 
-        return "+"..mult 
-    elseif to_big(arrows) < to_big(6) then 
-        if to_big(arrows) < to_big(1) then
-            return "X"..mult
-        end
-        local arr = ""
-        for i = 1, to_number(arrows) do
-            arr = arr.."^"
-        end
-        return arr..mult
-    else
-        return "{"..arrows.."}"..mult
-    end
-end
-
--- alias lemniscate used for this function
-function Spectrallib.format_arrow_value(...)
-    return Spectrallib.format_arrow_mult(...)
-end
-
-function Spectrallib.get_random_cards(areas, cardns, rpseudoseed, cond)
-    local cards = {}
-    for i, v in pairs(areas) do
-        for i2, v2 in pairs(v.cards) do
-            if not cond or cond(v2) then cards[#cards+1]=v2 end
-        end
-    end
-    pseudoshuffle(cards, pseudoseed(rpseudoseed or "fractured"))
-    local temp = {}
-    for i = 1, cardns do
-        temp[i] = cards[i]
-    end
-    return temp
-end
-
-function Spectrallib.stack_eval_returns(orig, new, etype)
-    if etype == "Xmult" or etype == "x_mult" or etype == "Xmult_mod" or etype == "Xchips" or etype == "Xchip_mod" or etype == "x_asc" or etype == "Emult_mod" or etype == "Echip_mod" then return (orig or 1) * new else
-        return (orig or 0) + new
-    end
-end
-
-function Spectrallib.deck_or_sleeve(key)
-    local num = 0
-    if key == "doc" and G.GAME.modifiers.doc_antimatter then num = num + 1 end
-    if key == "butterfly" and G.GAME.modifiers.butterfly_antimatter then num = num + 1 end
-    if CardSleeves then
-        if G.GAME.selected_sleeve == ("sleeve_entr_"..key) or G.GAME.selected_sleeve == key or G.GAME.selected_sleeve == "sleeve_"..key then num = num + 1 end
-    end
-    for i, v in pairs(G.GAME.entr_bought_decks or {}) do
-        if v == "b_entr_"..key or v == key or v == "b_"..key or v == "sleeve_"..key then num = num + 1 end
-    end
-    if  G.GAME.selected_back and (G.GAME.selected_back.effect.center.original_key == key or G.GAME.selected_back.effect.center.key == key or G.GAME.selected_back.effect.center.original_key == "b_"..key or G.GAME.selected_back.effect.center.key == "b_"..key) then num = num + 1 end
-    return num > 0 and num or nil
-end
-
-function Spectrallib.change_enhancements(areas, enh, required, uhl)
-    for i, v in pairs(areas) do
-        if not v.cards then 
-            areas[i] = {
-                cards = {v}
-            }
-        end
-    end
-    for i, v in pairs(areas) do
-        for i2, v2 in pairs(v.cards) do
-            if not required or (v2.config and v2.config.center.key == required) then
-                if enh == "null" then
-                    v2:start_dissolve()
-                elseif enh == "ccd" then
-
-                else
-                    v2:set_ability(G.P_CENTERS[enh])
-                    v2:juice_up()
-                end
-            end
-        end
-    end
-end
-
-function Spectrallib.apply_sticker(card, key)
-    if not card.ability then card.ability = {} end
-    if card.ability then
-        if not SMODS.Stickers[key] then return end
-        card.ability[key] = true
-        if SMODS.Stickers[key].apply then SMODS.Stickers[key].apply(SMODS.Stickers[key], card) end
-    end
-end
-
-function Spectrallib.rarity_above(check, threshold, gte)
-    if not Spectrallib.ReverseRarityChecks[check] then Spectrallib.ReverseRarityChecks[check] = 1 end
-    if not Spectrallib.ReverseRarityChecks[threshold] then Spectrallib.ReverseRarityChecks[threshold] = 1 end
-    if gte then return Spectrallib.ReverseRarityChecks[check] < Spectrallib.ReverseRarityChecks[threshold] end
     return Spectrallib.ReverseRarityChecks[check] <= Spectrallib.ReverseRarityChecks[threshold]
 end
-function Spectrallib.get_random_rarity_card(rare)
-    if rare == 1 then rare = "Common" end
-    if rare == 2 then rare = "Uncommon" end
-    if rare == 3 then rare = "Rare" end
-    local _pool, _pool_key = get_current_pool("Joker", rare, rare == 4, "ieros")
+
+-- Get a random center with a given rarity.
+---@param rarity string|integer
+---@return table
+function Spectrallib.get_random_rarity_card(rarity)
+    if rarity == 1 then rarity = "Common" end
+    if rarity == 2 then rarity = "Uncommon" end
+    if rarity == 3 then rarity = "Rare" end
+    local _pool, _pool_key = get_current_pool("Joker", rarity, rarity == 4, "ieros")
     local center = pseudorandom_element(_pool, pseudoseed(_pool_key))
-    local it = 1
+    local it = 1 -- Resample index
     while center == 'UNAVAILABLE' do
         it = it + 1
         center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it))
@@ -412,6 +555,304 @@ function Spectrallib.get_random_rarity_card(rare)
     return center
 end
 
+-- Position -> Rarity key
+Spectrallib.RarityChecks = {1, 2, 3, 4}
+if Cryptid and Cryptid.memepack then --using legacy stuff to check for cryptid and not cryptlib
+    Spectrallib.RarityChecks = {[0] = "cry_candy", 1, 2, 3, "cry_epic", 4, "cry_exotic", "entr_entropic"}
+end
+
+-- Rarity key -> Position
+Spectrallib.ReverseRarityChecks = {}
+for i, v in ipairs(Spectrallib.RarityChecks) do
+    Spectrallib.ReverseRarityChecks[v] = i
+end
+
+-- Get the key of the higher tier of a voucher, if it has higher tiers.
+---@param voucher_key string
+---@return string
+function Spectrallib.get_higher_voucher_tier(voucher_key)
+    for _, voucher in pairs(G.P_CENTER_POOLS.Voucher) do
+        if Spectrallib.in_table(voucher.requires or {}, voucher_key) then
+            return voucher.key
+        end
+    end
+end
+
+-- Get a random set.
+function Spectrallib.get_random_set(has_parakmi)
+    local pool = pseudorandom_element(G.P_CENTER_POOLS, pseudoseed(has_parakmi and "parakmi" or "chaos"))
+    local set = pool and pool[1] and G.P_CENTERS[pool[1].key] and pool[1].set
+
+    while (
+        not set
+        or Spectrallib.ParakmiBlacklist[set]
+        or (not has_parakmi and Spectrallib.ChaosBlacklist[set])
+    ) do
+        pool = pseudorandom_element(G.P_CENTER_POOLS, pseudoseed(has_parakmi and "parakmi" or "chaos"))
+        set = pool and pool[1] and G.P_CENTERS[pool[1].key] and pool[1].set
+    end
+
+    return set
+end
+
+-- Get a random set of cards from the select areas.
+---@param areas CardArea[]
+---@param count integer
+---@param seed string|any
+---@param cond fun(card: Card): boolean Iterated over each card; if true, the card can have a chance to be randomly selected.
+---@return Card[]
+function Spectrallib.get_random_cards(areas, count, seed, cond)
+    local cards = {}
+    for _, area in pairs(areas) do
+        for _, card in pairs(area.cards) do
+            if not cond or cond(card) then
+                table.insert(cards, card)
+            end
+        end
+    end
+
+    pseudoshuffle(cards, pseudoseed(seed or "fractured"))
+
+    local ret = {}
+    for i = 1, count do
+        table.insert(ret, cards[i])
+    end
+    return ret
+end
+
+-- Counts how many times a deck's effect is applied to the run.
+---@param key string
+---@return integer|nil
+function Spectrallib.deck_or_sleeve(key)
+    local num = 0
+    if key == "doc" and G.GAME.modifiers.doc_antimatter then
+        num = num + 1
+    elseif key == "butterfly" and G.GAME.modifiers.butterfly_antimatter then
+        num = num + 1
+    end
+
+    if Spectrallib.can_mods_load({"CardSleeves"}) and (
+        G.GAME.selected_sleeve == ("sleeve_entr_"..key)
+        or G.GAME.selected_sleeve == key
+        or G.GAME.selected_sleeve == "sleeve_"..key
+    ) then
+        num = num + 1
+    end
+
+    for _, bought_deck_key in pairs(G.GAME.entr_bought_decks or {}) do
+        if (
+            bought_deck_key == "b_entr_"..key
+            or bought_deck_key == key
+            or bought_deck_key == "b_"..key
+            or bought_deck_key == "sleeve_"..key)
+        then
+            num = num + 1
+        end
+    end
+
+    if G.GAME.selected_back and (
+        G.GAME.selected_back.effect.center.original_key == key
+        or G.GAME.selected_back.effect.center.key == key
+        or G.GAME.selected_back.effect.center.original_key == "b_"..key
+        or G.GAME.selected_back.effect.center.key == "b_"..key
+    ) then
+        num = num + 1
+    end
+
+    return num > 0 and num or nil
+end
+
+-- Get the higher enhancement of a card's enhancement (as defined by `card.upgrade_order` in enhancement prototypes).
+---@param card Card
+---@param bypass boolean Whether to bypass `card.no_doe` or not.
+---@param blacklist string[] A list of keys of enhancements to ignore.
+---@return string|nil
+function Spectrallib.upgrade_enhancement(card, bypass, blacklist)
+    local current_enh = card.config.center.key
+    if current_enh == "c_base" then return "m_bonus" end
+
+    local enhancements = {}
+    for _,enhancement in pairs(G.P_CENTER_POOLS.Enhanced) do
+        if (not enhancement.no_doe or bypass) and not blacklist[enhancement.key] then
+            table.insert(enhancements, enhancement)
+        end
+    end
+
+    table.sort(enhancements, function(a, b)
+        return (a.upgrade_order or a.order) < (b.upgrade_order or b.order)
+    end)
+
+    for i, enhancement in pairs(enhancements) do
+        if enhancement.key == current_enh then
+            return enhancements[i+1] and enhancements[i+1].key
+        end
+    end
+    return nil
+end
+
+-- Get the key of a card area in `G`.
+---@param area CardArea
+---@return string|nil
+function Spectrallib.get_area_name(area) 
+    if not area then return nil end
+    for i, v in pairs(G) do
+        if v == area then return i end
+    end
+end
+
+-- Get the index of a card in its area.
+---@param card Card
+---@return integer|nil
+function Spectrallib.get_idx_in_area(card)
+    if card and card.area then
+        for i, v in pairs(card.area.cards) do
+            if v == card then return i end
+        end
+    end
+end
+
+-- Give a random context key.
+---@param seed string|any
+---@return "before"|"pre_joker"|"joker_main"|"individual"|"pre_discard"|"remove_playing_cards"|"setting_blind"|"ending_shop"|"reroll_shop"|"selling_card"|"using_consumeable"|"playing_card_added"
+---@return any
+function Spectrallib.random_context(seed)
+    --Is this useful? idk but its entropy agnostic so :shrug:
+    return pseudorandom_element({
+        "before",
+        "pre_joker",
+        "joker_main",
+        "individual",
+        "pre_discard",
+        "remove_playing_cards",
+        "setting_blind",
+        "ending_shop",
+        "reroll_shop",
+        "selling_card",
+        "using_consumeable",
+        "playing_card_added"
+    }, pseudoseed(seed or "desync"))
+end
+
+-- A shorthand for various context checks.
+---@param self any
+---@param card Card
+---@param context table
+---@param currc string
+---@param edition boolean|any
+---@return boolean|nil
+function Spectrallib.context_checks(self, card, context, currc, edition)
+    if (
+        context.retrigger_joker
+        or context.blueprint
+        or context.forcetrigger
+        or context.post_trigger
+    ) then return end
+
+    local context_check = Spectrallib.context_check_def[currc]
+    if not context_check then
+        return
+    elseif type(context_check) == "function" and context_check(card, context, currc, edition) then
+        return true
+    elseif context_check == true then
+        return true
+    end
+end
+
+---@type {[string]: true | fun(card: Card, context: table, currc: string, edition: boolean|any): (boolean|any) }
+Spectrallib.context_check_def = {
+    pre_joker = function (card, context, currc, edition)
+        return context.pre_joker or (
+            edition
+            and context.main_scoring
+            and context.cardarea == G.play
+        )
+    end,
+    joker_main = function (card, context, currc, edition)
+        return context.joker_main or (
+            edition
+            and context.main_scoring
+            and context.cardarea == G.play
+        )
+    end,
+    individual = function (card, context, currc, edition)
+        return (
+            context.individual
+            and context.cardarea == G.play
+            and not context.blueprint
+        ) or (
+            edition
+            and context.main_scoring
+            and context.cardarea == G.play
+        )
+    end,
+    pre_discard = function (card, context, currc, edition)
+        return (
+            context.pre_discard
+            and context.cardarea == G.hand
+            and not context.retrigger_joker
+            and not context.blueprint
+        )
+    end,
+    remove_playing_cards = function (card, context, currc, edition)
+        return (
+            context.remove_playing_cards
+            and not context.blueprint
+        )
+    end,
+    -- Equivalent to `function(card, context, currc, edition) return context[key] end`
+    before = true,
+    setting_blind = true,
+    ending_shop = true,
+    reroll_shop = true,
+    selling_card = true,
+    using_consumeable = true,
+    playing_card_added = true,
+}
+
+-- Get the number of times that the given card will repeat.
+---@param card Card
+---@return {repetitions: integer}
+function Spectrallib.get_repetitions(card)
+    local res2 = {}
+    for _, joker in ipairs(G.jokers.cards) do
+        local res = eval_card(joker, {
+            repetition = true,
+            other_card = card,
+            cardarea = card.area,
+            card_effects = {{},{}}
+        }) or {}
+        if res.jokers and res.jokers.repetitions then
+            res2.repetitions = (res2.repetitions or 0) + res.jokers.repetitions
+        end
+    end
+    return res2
+end
+
+-- todo: figure out what this does
+---@param poker_hands table
+---@return string|nil
+function Spectrallib.no_recurse_scoring(poker_hands)
+    local text, scoring_hand
+	for _, hand in ipairs(G.handlist) do
+		if next(poker_hands[hand]) then
+			text = hand
+			scoring_hand = poker_hands[hand][1]
+			break
+		end
+	end
+    return text
+end
+
+--#endregion
+----------------------------------
+
+---------------
+--#region UI --
+---------------
+
+-- Creates a UI node containing a random character.
+---@param arr string
+---@return {n: G.UIT.O, config: {object: DynaText}}
 function Spectrallib.randomchar(arr)
     return {
         n = G.UIT.O,
@@ -430,157 +871,31 @@ function Spectrallib.randomchar(arr)
     }
 end
 
-function Spectrallib.stringsplit(s) 
-    local tbl = {}
-    for i = 1, #s do
-        tbl[#tbl+1]=s:sub(i,i)
-    end
-    return tbl
-end
+--#endregion
+---------------
 
-function Spectrallib.upgrade_enhancement(card, bypass, blacklist)
-    local enh = card.config.center.key
-    if enh == "c_base" then return "m_bonus" end
-    local cards = {}
-    for i, v in pairs(G.P_CENTER_POOLS.Enhanced) do
-        if (not v.no_doe or bypass) and not blacklist[v.key] then cards[#cards+1]=v end
-    end
-    table.sort(cards, function(a, b)
-        return (a.upgrade_order or a.order) < (b.upgrade_order or b.order)
-    end)
-    for i, v in pairs(cards) do
-        if v.key == enh then return cards[i+1] and cards[i+1].key end
-    end
-    return nil
-end
 
-function Spectrallib.get_area_name(area) 
-    if not area then return nil end
-    for i, v in pairs(G) do
-        if v == area then return i end
-    end
-end
-function Spectrallib.get_idx_in_area(card)
-    if card and card.area then
-        for i, v in pairs(card.area.cards) do
-            if v == card then return i end
-        end
-    end
-end
 
---Is this useful? idk but its entropy agnostic so :shrug:
-function Spectrallib.random_context(seed)
-    return pseudorandom_element({
-        "before",
-        "pre_joker",
-        "joker_main",
-        "individual",
-        "pre_discard",
-        "remove_playing_cards",
-        "setting_blind",
-        "ending_shop",
-        "reroll_shop",
-        "selling_card",
-        "using_consumeable",
-        "playing_card_added"
-    }, pseudoseed(seed or "desync"))
-end
 
-function Spectrallib.context_checks(self, card, context, currc, edition)
-    if not context.retrigger_joker and not context.blueprint and not context.forcetrigger and not context.post_trigger then
-        if currc == "before" and context.before then return true end
-        if currc == "pre_joker" and ((context.pre_joker) or (edition and context.main_scoring and context.cardarea == G.play)) then return true end
-        if currc == "joker_main" and ((context.joker_main) or (edition and context.main_scoring and context.cardarea == G.play)) then return true end
-        if currc == "individual" and ((context.individual and context.cardarea == G.play and not context.blueprint) or (edition and context.main_scoring and context.cardarea == G.play)) then return true end
-        if currc == "pre_discard" and context.pre_discard and context.cardarea == G.hand and not context.retrigger_joker and not context.blueprint then return true end
-        if currc == "remove_playing_cards" and context.remove_playing_cards and not context.blueprint then return true end
-        if currc == "setting_blind" and context.setting_blind then return true end
-        if currc == "ending_shop" and context.ending_shop then return true end
-        if currc == "reroll_shop" and context.reroll_shop then return true end
-        if currc == "selling_card" and context.selling_card then return true end
-        if currc == "using_consumeable" and context.using_consumeable then return true end
-        if currc == "playing_card_added" and context.playing_card_added then return true end
-    end
-end
 
-function Spectrallib.get_repetitions(card)
-    local res2 = {}
-    for i, v in ipairs(G.jokers.cards) do
-        local res = eval_card(v, {repetition=true, other_card=card,cardarea=card.area,card_effects={{},{}}}) or {}
-        if res.jokers and res.jokers.repetitions then
-            res2.repetitions = (res2.repetitions or 0) + res.jokers.repetitions
-        end
-    end
-    return res2
-end
 
-function Spectrallib.approximate_log_recursion(orig, base, iter)
-    if to_big(iter) < to_big(1000) then
-        if to_big(orig) < to_big(base) then return orig end
-        local result = orig
-        for i = 1, to_number(iter) do
-            result = to_big(result) * to_big(math.log(to_big(result), to_big(base)))
-        end
-        return result
-    else
-        local m = iter/math.log(base)
-        local l1 = math.log(m)
-        local l2 = math.log(l1)
-        local E = iter * (l1 + l2 - 1 + ((l2-2)/l1))
-        local result = to_big(2.718281846) ^ to_big(E)
-        return result
-    end
-end
 
-function Spectrallib.change_play_limit_no_bs(mod,stroverride)
-    if SMODS.hand_limit_strings then
-        G.GAME.starting_params.play_limit = (G.GAME.starting_params.play_limit or 5) + mod
-        G.hand.config.highlighted_limit = math.max(G.GAME.starting_params.discard_limit or 5, G.GAME.starting_params.play_limit or 5)
-        local str = stroverride or G.GAME.starting_params.play_limit or ""
-        SMODS.hand_limit_strings.play = G.GAME.starting_params.play_limit ~= 5 and localize('b_limit') .. str  or ''
-    else
-        G.hand.config.highlighted_limit = G.hand.config.highlighted_limit + mod
-    end
-end
 
-function Spectrallib.change_discard_limit_no_bs(mod,stroverride)
-    G.GAME.starting_params.discard_limit = (G.GAME.starting_params.discard_limit or 5) + mod
-    G.hand.config.highlighted_limit = math.max(G.GAME.starting_params.discard_limit or 5, G.GAME.starting_params.play_limit or 5)
-    local str = stroverride or G.GAME.starting_params.discard_limit or ""
-    SMODS.hand_limit_strings.discard = G.GAME.starting_params.discard_limit ~= 5 and localize('b_limit') .. str or ''
-end
 
-function Spectrallib.change_selection_limit(mod,stroverride)
-    if not SMODS.hand_limit_strings then SMODS.hand_limit_strings = {} end
-    Spectrallib.change_play_limit_no_bs(mod,stroverride)
-    if SMODS.hand_limit_strings then
-        Spectrallib.change_discard_limit_no_bs(mod,stroverride)
-    end
-end
 
-function Spectrallib.pseudorandom_element(table, seed, blacklist)
-    local elem = pseudorandom_element(table, seed)
-    local tries = 0
-    while blacklist(elem) and tries < 100 do
-        elem = pseudorandom_element(table, seed)
-        tries = tries + 1
-    end
-    return elem
-end
 
-function Spectrallib.no_recurse_scoring(poker_hands)
-    local text 
-    local scoring_hand
-	for _, v in ipairs(G.handlist) do
-		if next(poker_hands[v]) then
-			text = v
-			scoring_hand = poker_hands[v][1]
-			break
-		end
-	end
-    return text
-end
 
+--------------
+-- UNSORTED --
+--------------
+
+-- Get a center that is in a pool.
+---@param _type string
+---@param twisted any
+---@param _rarity string
+---@param _noparakmi boolean
+---@param soulable boolean
+---@param key_append string
 function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soulable, key_append)
     local center = G.P_CENTERS.b_red
     local forced_key
@@ -589,9 +904,9 @@ function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soul
     if not forced_key and soulable and (not G.GAME.banned_keys['c_soul']) then
         for _, v in ipairs(SMODS.Consumable.legendaries) do
             if (_type == v.type.key or _type == v.soul_set) and not (G.GAME.used_jokers[v.key] and not SMODS.showman(v.key) and not v.can_repeat_soul) and SMODS.add_to_pool(v, {}) then
-                                if pseudorandom('soul_'..v.key.._type..G.GAME.round_resets.ante) > (1 - v.soul_rate) then
-                                    if not G.GAME.banned_keys[v.key] then forced_key = v.key end
-                                end
+                if pseudorandom('soul_'..v.key.._type..G.GAME.round_resets.ante) > (1 - v.soul_rate) then
+                    if not G.GAME.banned_keys[v.key] then forced_key = v.key end
+                end
             end
         end
         if (_type == 'Tarot' or _type == 'Spectral' or _type == 'Tarot_Planet') and
@@ -1120,18 +1435,7 @@ function Spectrallib.shares_aspect(card1, card2)
     if card1.seal and card1.seal == card2.seal then return true end
 end
 
-Spectrallib.RarityChecks = (Cryptid and Cryptid.memepack) and { --using legacy stuff to check for cryptid and not cryptlib
-    [0]="cry_candy",
-    1,
-    2,
-    3,
-    "cry_epic",
-    4,
-    "cry_exotic",
-    "entr_entropic"
-} or {
-  1, 2, 3, 4
-}
+
 
 function Card:is_playing_card()
     if not G.deck or not self then return end
@@ -1143,12 +1447,9 @@ function Card:is_playing_card()
     if self.area and self.area.config.view_deck then return true end
 end
 
-Spectrallib.ReverseRarityChecks = {
 
-}
-for i, v in ipairs(Spectrallib.RarityChecks) do
-    Spectrallib.ReverseRarityChecks[v]=i
-end
+
+
 
 Spectrallib.ChaosBlacklist = {}
 Spectrallib.ParakmiBlacklist = {}

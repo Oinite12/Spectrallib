@@ -3,10 +3,10 @@ Spectrallib.pointerblist = {}
 Spectrallib.pointerblistrarity = {}
 Spectrallib.mod_gameset_whitelist = {}
 Spectrallib.mod_whitelist = {}
+---@type { [string]: integer | fun():(integer|nil) }
 Spectrallib.ascension_numbers = {}
-Spectrallib.rarity_table = {
+Spectrallib.rarity_table = {}
 
-}
 Cryptid_config = {}
 function cry_format(...)
     return ...

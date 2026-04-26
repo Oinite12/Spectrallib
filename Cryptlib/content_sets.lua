@@ -5,7 +5,7 @@
 ---------------------------
 
 -- Get the gameset of an object or its prototype.
--- If object nor prototype is given, get the gameset of the current save.
+-- If neither object nor prototype is given, get the gameset of the current save.
 ---@param object? table
 ---@param prototype? table
 ---@return "modest"|"mainline"|"madness"
