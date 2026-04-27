@@ -3,6 +3,7 @@ local attributes = {
     "eqchips", "eqmult", "asc", "xasc", "easc", "hyperasc",
     "forcetrigger", "value_manip",
     "multiuse",
+    "escore", "eblindsize", "hyperscore", "hyperblindsize"
 }
 
 for _, v in ipairs(attributes) do
