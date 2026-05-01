@@ -226,20 +226,30 @@ function Spectrallib.pseudorandom_element(tbl, seed, blacklist)
     return elem
 end
 
+-- Calculate the Euclidean distance between two points.
+---@param a [number, number]
+---@param b [number, number]
+---@return number
+function Spectrallib.pythag(a, b)
+    local a_X, a_Y = a[1], a[2]
+    local b_X, b_Y = b[1], b[2]
+    return math.sqrt(((a_X - b_X) ^ 2) + ((a_Y - b_Y) ^ 2))
+end
+
 --#endregion
 -------------------------------
 
-----------------------------------
---#region GAMEPLAY MODIFICATION --
-----------------------------------
+-----------------------------
+--#region GAMEPLAY EFFECTS --
+-----------------------------
 
 ---@alias Spectrallib.flip_then.func fun(card: Card, cardlist: Card[], i: integer): any
 
 -- Double-flips cards in the provided list, and also run functions before, during, and after double-flipping.
 ---@param cardlist Card[]
----@param func {func: Spectrallib.flip_then.func, delay: number}[] | Spectrallib.flip_then.func The functions to run on a card between flips.
----@param before fun(card: Card): any The function to run on a card before flipping once.
----@param after fun(card: Card): any The function to run on a card after flipping again.
+---@param func? {func: Spectrallib.flip_then.func, delay: number}[] | Spectrallib.flip_then.func The functions to run on a card between flips.
+---@param before? fun(card: Card): any The function to run on a card before flipping once.
+---@param after? fun(card: Card): any The function to run on a card after flipping again.
 ---@return nil
 function Spectrallib.flip_then(cardlist, func, before, after)
     local skipanims = Spectrallib.should_skip_animations()
@@ -368,7 +378,7 @@ function Spectrallib.modify_hand_card_NF(modifications, cards)
 end
 
 -- Forcetrigger a random card.
----@param card Card The card causing the forcetriggering.
+---@param source_card Card The card causing the forcetriggering.
 ---@param count integer
 ---@param context table
 ---@return nil
@@ -477,8 +487,245 @@ function Spectrallib.change_selection_limit(mod,stroverride)
     end
 end
 
+-- Unhighlight all cards in the provided card areas.
+---@param areas CardArea[]
+function Spectrallib.unhighlight(areas) 
+    for _, area in pairs(areas) do
+        area:unhighlight_all()
+    end
+end
+
+-- Randomize a random aspect of a playing card.
+---@param card Card
+---@param types ("Enhancement"|"Edition"|"Seal"|"Base")[]
+---@param seed string|any
+---@param noflip boolean
+---@return nil
+function Spectrallib.randomise_once(card, types, seed, noflip)
+    types = types or {"Enhancement", "Edition", "Seal", "Base"}
+    seed = seed or "ihwaz"
+    local mtype = pseudorandom_element(types, pseudoseed(seed))
+
+    -- Non-flip modifying
+    if mtype == "Seal" then
+        local seal = SMODS.poll_seal{guaranteed = true, key = seed}
+        card:set_seal(seal)
+        card:juice_up()
+        return
+    elseif mtype == "Edition" then
+        local edition = SMODS.poll_edition({guaranteed = true, key = seed})
+        card:set_edition(edition)
+        card:juice_up()
+        return
+    end
+
+    -- Flipping modifying
+
+    if not noflip then card:flip() end
+
+    if mtype == "Enhancement" then
+        local enhancement = SMODS.poll_enhancement({guaranteed = true, key = seed})
+        card:set_ability(G.P_CENTERS[enhancement])
+    elseif mtype == "Base" then
+        Spectrallib.randomize_rank_suit(card, true, true, seed)
+    end
+
+    if not noflip then card:flip() end
+end
+
+-- Randomize a card's rank and/or suit.
+---@param card Card
+---@param randomize_rank boolean If true, randomize rank.
+---@param randomize_seed boolean If true, randomize suit.
+---@param seed string|any
+---@return nil
+function Spectrallib.randomize_rank_suit(card, randomize_rank, randomize_seed, seed)
+    local ranks = {}
+    local suits = {}
+    if randomize_rank then
+        for rank_key, rank in pairs(SMODS.Ranks) do
+            if SMODS.add_to_pool(rank, {}) then table.insert(ranks, rank_key) end
+        end
+    end
+    if randomize_seed then
+        for suit_key, suit in pairs(SMODS.Suits) do
+            if SMODS.add_to_pool(suit, {}) then table.insert(suits, suit_key) end
+        end
+    end
+    local select_rank = pseudorandom_element(ranks, pseudoseed(seed))
+    local select_suit = pseudorandom_element(suits, pseudoseed(seed))
+    SMODS.change_base(card, select_suit, select_rank, nil)
+end
+
+-- Wrapper for CardArea:handle_card_limit; sets the card limit of an area.
+---@param area CardArea
+---@param num number
+---@return nil
+function Spectrallib.handle_card_limit(area, num)
+    area.config.card_limit = area.config.card_limit + (num or 0)
+    area:handle_card_limit()
+end
+
+-- Get the index of the center previous to the input `card`, with the order based on the selected `pool`.
+---@param card Card
+---@param pool string Index of G.P_CENTER_POOLS
+---@param strict? boolean If true, the card considered "previous" must actually be able to appear in gameplay.
+---@return integer
+function Spectrallib.reduction_index(card, pool, strict)
+    local i = 0
+    for x, v in pairs(G.P_CENTER_POOLS[pool]) do
+        if card.config and v.key == card.config.center_key then
+            i = x - 1 -- previous
+            break
+        end
+    end
+    if strict then
+        while (
+            G.P_CENTER_POOLS[pool]
+            and G.P_CENTER_POOLS[pool][i]
+            and (
+                G.P_CENTER_POOLS[pool][i].no_doe
+                or G.P_CENTER_POOLS[pool][i].no_collection
+            )
+        )
+        do i = i - 1 end
+    end
+    if i < 1 then i = 1 end
+    return i
+end
+
+-- Convert a card or set of cards into the card previous to it, with the order being based on the Collection.
+---@param cards Card|Card[]
+---@param card Card The card causing the conversion.
+---@return nil
+function Spectrallib.reduce_cards(cards, card)
+    if cards.ability then cards = {cards} end
+    Spectrallib.flip_then(cards, function(cardd)
+        local ind = Spectrallib.reduction_index(cardd, cardd.config.center.set, true)
+        if G.P_CENTER_POOLS.Joker[ind] then
+            cardd:set_ability(G.P_CENTER_POOLS.Joker[ind])
+        end
+        cardd.area:remove_from_highlighted(card)
+    end)
+end
+
+-- Create a dummy card that has the methods of a regular card without its on-field existence.
+---@param center table The prototype of the card.
+---@param area CardArea
+---@param self Card The card that creates the dummy card.
+---@param silent boolean If true, ??? todo: figure this out
+---@return table
+function Spectrallib.get_dummy(center, area, self, silent)
+    local abil = copy_table(center.config) or {}
+    abil.consumeable = copy_table(abil)
+    abil.name = center.name or center.key
+    abil.set = center.set
+    abil.t_mult = abil.t_mult or 0
+    abil.t_chips = abil.t_chips or 0
+    abil.x_mult = abil.x_mult or abil.Xmult or 1
+    abil.extra_value = abil.extra_value or 0
+    abil.d_size = abil.d_size or 0
+    abil.mult = abil.mult or 0
+    abil.effect = center.effect
+    abil.h_size = abil.h_size or 0
+    abil.card_limit = abil.card_limit or 1
+    abil.extra_slots_used = abil.extra_slots_used or 0
+
+    local eligible_editionless_jokers = {}
+    for _, joker in pairs(G.jokers and G.jokers.cards or {}) do
+        if not joker.edition then
+            eligible_editionless_jokers[#eligible_editionless_jokers + 1] = joker
+        end
+    end
+
+    local tbl = {
+        ability = abil,
+        config = {
+            center = center,
+            center_key = center.key
+        },
+        juice_up = function(_, ...)
+            return self:juice_up(...)
+        end,
+        start_dissolve = function(_, ...)
+            if not _.silent then
+                return self:start_dissolve(...)
+            end
+        end,
+        remove = function(_, ...)
+            return self:remove(...)
+        end,
+        flip = function(_, ...)
+            return self:flip(...)
+        end,
+        can_use_consumeable = function(self, ...)
+            return Card.can_use_consumeable(self, ...)
+        end,
+        calculate_joker = function(self, ...)
+            return Card.calculate_joker(self, ...)
+        end,
+        can_calculate = function(self, ...)
+            return Card.can_calculate(self, ...)
+        end,
+        set_cost = function(self, ...)
+            Card.set_cost(self, ...)
+        end,
+        calculate_sticker = function(self, ...)
+            Card.calculate_sticker(self, ...)
+        end,
+        base_cost = 1,
+        extra_cost = 0,
+        original_card = self,
+        area = area,
+        added_to_deck = added_to_deck, -- undefined
+        cost = self.cost,
+        sell_cost = self.sell_cost,
+        eligible_strength_jokers = eligible_editionless_jokers,
+        eligible_editionless_jokers = eligible_editionless_jokers,
+        T = self.T,
+        VT = self.VT,
+        CT = self.CT,
+        silent = silent
+    }
+
+    for key, method in pairs(Card --[[@as table]]) do
+        if type(method) == "function" and key ~= "flip_side" then
+            tbl[key] = function(_, ...)
+                return method(self, ...)
+            end
+        end
+    end
+    tbl.set_edition = function(s, ed, ...)
+        Card.set_edition(s, ed, ...)
+    end
+    tbl.get_chip_h_x_mult = function(s, ...)
+        local ret = SMODS.multiplicative_stacking(s.ability.h_x_mult or 1,
+            (not s.ability.extra_enhancement and s.ability.perma_h_x_mult) or 0)
+        return ret
+    end
+    tbl.get_chip_x_mult = function(s, ...)
+        local ret = SMODS.multiplicative_stacking(s.ability.x_mult or 1,
+            (not s.ability.extra_enhancement and s.ability.perma_x_mult) or 0)
+        return ret
+    end
+    tbl.use_consumeable = function(self, ...)
+        self.bypass_echo = true
+        local ret = Card.use_consumeable(self, ...)
+        self.bypass_echo = nil
+    end
+
+    return tbl
+end
+
+-- Hook required by dummy cards to direct eval text to card that created them
+local card_eval_status_text_ref = card_eval_status_text
+function card_eval_status_text(card, ...)
+    return card_eval_status_text_ref(card.original_card or card, ...)
+end
+
+
 --#endregion
-----------------------------------
+-----------------------------
 
 ----------------------------
 --#region OBJECT CHECKING --
@@ -843,8 +1090,314 @@ function Spectrallib.no_recurse_scoring(poker_hands)
     return text
 end
 
+-- Count the total number of stickers across all cards.
+---@param extra_card Card May be a card that is not in `G.jokers`, `G.consumeables`, `G.hand`, `G.play`, or `G.deck`
+function Spectrallib.count_stickers(extra_card)
+    local total = 0
+    local cards = {}
+    local add_self = true
+
+    for _, area in pairs({G.jokers, G.consumeables, G.hand, G.play, G.deck}) do
+        for _, card in pairs(area.cards) do
+            table.insert(cards, card)
+            if card == extra_card then
+                add_self = false
+            end
+        end
+    end
+    if add_self then
+        table.insert(cards, extra_card)
+    end
+
+    for sticker_key in pairs(SMODS.Sticker.obj_table) do
+        for _, card in pairs(cards) do
+            if card.ability and card.ability[sticker_key] then
+                total = total + 1
+            end
+        end
+    end
+    return total
+end
+
+---@param suit string
+---@return string
+function Spectrallib.get_inverse_suit(suit)
+    return ({
+        Diamonds = "Hearts",
+        Hearts = "Diamonds",
+        Clubs = "Spades",
+        Spades = "Clubs"
+    })[suit] or suit
+end
+
+---@param rank string
+---@return string
+function Spectrallib.get_inverse_rank(rank)
+    return ({
+        ["2"]  = "Ace",
+        ["3"]  = "King",
+        ["4"]  = "Queen",
+        ["5"]  = "Jack",
+        ["6"]  = "10",
+        ["7"]  = "9",
+        ["8"]  = "8",
+        ["9"]  = "7",
+        ["10"] = "6",
+        ["11"] = "5",
+        ["12"] = "4",
+        ["13"] = "3",
+        ["14"] = "2"
+    })[tostring(rank)] or rank
+end
+
+-- Check if an item can appear in shop.
+---@param key string
+---@param consumable boolean If true, consumable probabilities will be checked.
+---@return true|nil
+function Spectrallib.is_in_shop(key, consumable)
+	local center = G.P_CENTERS[key]
+    if (
+        center.hidden
+        or center.no_doe
+        or center.no_collection
+        or G.GAME.banned_keys[key]
+        or not center.unlocked
+    ) then
+		return
+	elseif center.set == "Joker" then
+		if center.rarity == 1 or center.rarity == 2 or center.rarity == 3 then
+			return center.unlocked or nil
+		end
+        local rarity_proto = SMODS.Rarities[center.rarity]
+        if not rarity_proto then return nil end
+
+		if (
+            rarity_proto.get_weight
+            or (rarity_proto.default_weight or 0) > 0
+        )
+		then return center.unlocked or nil end
+
+		return nil
+	elseif consumable then
+        local set_rate_key = center.set:lower()
+        local set_rate = G.GAME[set_rate_key .. "_rate"]
+        local percrate_rate = G.GAME.cry_percrate and G.GAME.cry_percrate[set_rate_key] or 1
+        return set_rate > 0 and percrate_rate > 0 or nil
+    end
+	return SMODS.add_to_pool(center, {})
+end
+
+-- An extension of SMODS.has_no_suit that checks for additional modded properties.
+---@param card Card
+---@return boolean
+function Spectrallib.true_suitless(card)
+    return (
+        SMODS.has_no_suit(card)
+        or card.config.center.key == "m_stone"
+        or card.config.center.overrides_base_rank
+        or card.base.suit == "entr_nilsuit"
+        or card.base.value == "entr_nilrank"
+    )
+end
+
+-- Count how many hands have been played more than a given amount of times.
+---@param threshold number Hands are counted if played more times than this value.
+---@return integer
+function Spectrallib.played_hands(threshold)
+    local total = 0
+    for _, hand in pairs(G.GAME.hands or {}) do
+        if hand.played > threshold then
+            total = total + 1
+        end
+    end
+    return total
+end
+
+-- Check if a center can spawn; it will not, if a card object with it as its center exists in the game space (and Showman is not held).
+---@param center table
+---@return boolean|nil
+function Spectrallib.allow_spawning(center)
+    -- todo: not sure what this is for
+    for _, v in pairs(G.I.CARD) do
+        if (
+            v.config
+            and v.config.center
+            and center
+            and v.config.center.key == center.key
+        ) then return SMODS.showman(center.key) or nil end
+    end
+    return true
+end
+
+-- Determine if animations should be skipped.
+---@param strict boolean If true, Handy animation skip value must be at least 4 ("skip everything") (instead of 3 ("skip animations")).
+---@return boolean
+function Spectrallib.should_skip_animations(strict)
+    local talisman_check = Talisman and Talisman.config_file.disable_anims
+    if talisman_check then return true end
+
+    local handy_check = Spectrallib.safe_get(Handy, "animation_skip", "get_value")
+    if type(handy_check) == "function" then
+        -- 4 = "Skip everything"
+        -- 3 = "Skip animations"
+        handy_check = handy_check() >= (strict and 4 or 3)
+    else
+        handy_check = nil
+    end
+    if handy_check then return true end
+    return false
+end
+
+-- Get a Joker based on its sort_id.
+---@param id integer
+---@return Card|nil
+function Spectrallib.get_by_sortid(id)
+    for _, joker in pairs(G.jokers.cards) do
+        if joker.sort_id == id then
+            return joker
+        end
+    end
+end
+
+-- Get the scoring values of a specific enhancement, as defined by this function.<br>
+-- Example: Chameleon (Entropy); Intended to be hooked for additional enhancements.
+---@param enh string Enhancement key.
+---@param card Card
+---@return table
+function Spectrallib.trigger_enhancement(enh, card)
+    if G.P_CENTERS[enh].demicoloncompat then
+        return G.P_CENTERS[enh]:calculate(card, {forcetrigger = true})
+    end
+    local lucky = {}
+    if SMODS.pseudorandom_probability(card, 'entr_chameleon', 1, 5) then
+        lucky.mult = 20
+    end
+    if SMODS.pseudorandom_probability(card, 'entr_chameleon', 1, 15) then
+        lucky.money = 20
+    end
+    local funcs = {
+        m_mult = {mult = 4},
+        m_bonus = {chips = 30},
+        m_glass = {xmult = 2},
+        m_steel = {xmult = 1.5},
+        m_stone = {chips = 50},
+        m_gold = {money=3},
+        m_lucky = lucky
+    }
+    if funcs[enh] then
+        return funcs[enh]
+    end
+end
+
+-- Get the prototype of a random ultra-rare Spectral card.
+---@param seed string|any
+---@return table
+function Spectrallib.get_random_rare(seed)
+    seed = seed or "entr_rare"
+    local cards = {}
+    for _,center in pairs(G.P_CENTERS) do
+        if SMODS.add_to_pool(center, {}) and center.hidden and not center.no_doe then
+            cards[#cards+1] = center
+        end
+    end
+    local select_center = pseudorandom_element(cards, pseudoseed(seed))
+    return select_center
+end
+
+-- Get the sum of all values in a card's ability table.
+---@param card Card|{ ability: {[string]: number|table} }|table
+---@return number
+function Spectrallib.gather_values(card)
+    local total = 0
+    for ability_key, value in pairs(card.ability) do
+        if (
+            Spectrallib.is_number(value)
+            and value > 1
+            and ability_key ~= "order"
+        ) then
+            total = total + value
+        elseif type(value) == "table" then
+            total = total + Spectrallib.gather_values({ability = value})
+        end
+    end
+    return total
+end
+
+-- Map a booster pack name to its corresponding item set.
+---@param kind string|"Arcana"|"Celestial"|"Ethereal"|"Buffoon"|"Inverted"
+---@param c? boolean If true, "Inverted" maps to "Twisted", otherwise it maps to nil.
+---@return string|nil
+function Spectrallib.kind_to_set(kind, c)
+    local check = {
+        Arcana = "Tarot",
+        Celestial = "Planet",
+        Ethereal = "Spectral",
+        Buffoon = "Joker",
+        Inverted = c and "Twisted" or nil
+    }
+
+    local kind2 = check[kind] or kind
+    check.Inverted = "Twisted"
+    local check2 = check[kind] or kind
+    if not (
+        G.P_CENTER_POOLS[kind2]
+        or G.P_CENTER_POOLS[check2]
+    ) then return end
+
+    return kind2
+end
+
+-- Count the number of ranks that are not present in the total deck.
+---@return integer
+function Spectrallib.missing_ranks()
+    local remaining_ranks = {}
+
+    -- Collect ranks
+    for _, rank in pairs(SMODS.Ranks) do
+        if not (rank.original_mod or rank.mod) then
+            remaining_ranks[rank.id] = true
+        end
+    end
+
+    -- Strike out ranks that are being used
+    for _, card in pairs(G.playing_cards or {}) do
+        remaining_ranks[card.base.id] = nil
+    end
+
+    -- `ranks` now only contains whichever ranks have not been nil'd
+    local total = 0
+    for _ in pairs(remaining_ranks) do
+        total = total + 1
+    end
+
+    return total
+end
+
+-- Returns true if the two input cards share the same rank, center, edition, or seal.
+---@param card1 Card
+---@param card2 Card
+---@return true|nil
+function Spectrallib.shares_aspect(card1, card2)
+    if card1:get_id() == card2:get_id() then return true end
+
+    if (
+        card1.config.center.set ~= "Default"
+        and card1.config.center.key == card2.config.center.key
+    ) then return true end
+
+    if (
+        card1.edition and card2.edition
+        and card1.edition.key == card2.edition.key
+    ) then return true end
+
+    if (
+        card1.seal
+        and card1.seal == card2.seal
+    ) then return true end
+end
+
 --#endregion
-----------------------------------
+----------------------------
 
 ---------------
 --#region UI --
@@ -871,8 +1424,157 @@ function Spectrallib.randomchar(arr)
     }
 end
 
+-- Determines if a card can be pulled.
+---@param card Card
+---@return boolean
+function Spectrallib.can_be_pulled(card)
+    local center = card.config.center
+    if card.ability.glitched_crown then
+        center = G.P_CENTERS[card.ability.glitched_crown[card.glitched_index]]
+    end
+
+    if (
+        not card:selectable_from_pack(SMODS.OPENED_BOOSTER)
+        and next(SMODS.find_card("j_entr_oekrep"))
+        and card.ability.consumeable
+    ) then
+        return not (center.hidden or center.no_select)
+    end
+
+    return (
+        not (center.hidden or center.no_select)
+        and (
+            SMODS.ConsumableTypes[center.set]
+            and SMODS.ConsumableTypes[center.set].can_be_pulled
+            or center.can_be_pulled
+        )
+    )
+end
+
+-- Determines if a card needs a "pull" button.
+---@param card Card
+---@return string|boolean|any
+function Spectrallib.needs_pull_button(card)
+    local center = card.config.center
+
+    local can_be_selected = not (center.hidden or center.no_select)
+    local can_be_pulled = (
+        SMODS.ConsumableTypes[center.set]
+        and SMODS.ConsumableTypes[center.set].can_be_pulled
+        or center.can_be_pulled
+    )
+    local pull_label = type(can_be_pulled) == string and can_be_pulled or nil
+
+    if (
+        not card:selectable_from_pack(SMODS.OPENED_BOOSTER)
+        and next(SMODS.find_card("j_entr_oekrep"))
+        and card.ability.consumeable
+    ) then
+        return can_be_selected and localize("b_select")
+    end
+
+    if can_be_selected and can_be_pulled then
+        return localize(pull_label or "b_select")
+    end
+
+    for _, center_key in pairs(card.ability.glitched_crown or {}) do
+        local sub_center = G.P_CENTERS[center_key]
+        local sub_can_be_selected = not (sub_center.hidden or sub_center.no_select)
+        local sub_can_be_pulled = (
+            SMODS.ConsumableTypes[sub_center.set]
+            and SMODS.ConsumableTypes[sub_center.set].can_be_pulled
+            or sub_center.can_be_pulled
+        )
+        local sub_pull_label = type(can_be_pulled) == string and can_be_pulled or nil
+
+        if sub_can_be_selected and sub_can_be_pulled then
+            return localize(sub_pull_label or "b_select")
+        end
+    end
+end
+
+-- Determines if a card needs a "use" button.
+---@param card Card
+---@return boolean
+function Spectrallib.needs_use_button(card)
+    local center = card.config.center
+    local center_cant_use = false
+
+    if not (center.no_use_button or (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].no_use_button)) then
+        center_cant_use = true
+    end
+
+    for _,center_key in pairs(card.ability.glitched_crown or {}) do
+        local subcenter = G.P_CENTERS[center_key]
+        if not (subcenter.no_use_button or (SMODS.ConsumableTypes[subcenter.set] and SMODS.ConsumableTypes[subcenter.set].no_use_button)) then
+            center_cant_use = true
+            break
+        end
+    end
+    return center_cant_use
+end
+
+-- Get the position of a card on the screen, with units being pixels.
+---@param card Card
+---@return [number, number]
+function Spectrallib.get_card_pixel_pos(card)
+    return {
+        (G.ROOM.T.x + card.T.x + card.T.w * 0.5) * (G.TILESIZE * G.TILESCALE),
+        (G.ROOM.T.y + card.T.y + card.T.h * 0.5) * (G.TILESIZE * G.TILESCALE),
+    }
+end
+
+-- Calculate the length of the screen's diagonal.
+---@return number
+function Spectrallib.max_diagonal()
+    return Spectrallib.pythag({0, 0}, {love.graphics.getWidth(), love.graphics.getHeight()})
+end
+
 --#endregion
 ---------------
+
+------------------
+--#region DEBUG --
+------------------
+
+-- DEBUG: Calculate the composition of Entropy Jokers grouped by rarities.
+---@param incl_vanilla boolean If true, also count Vanilla Jokers.
+---@param only_vanilla boolean If true, only count Vanilla Jokers.
+---@return nil
+function Spectrallib.calculate_ratios(incl_vanilla, only_vanilla)
+    local total = 0
+    local rarities = {}
+    for _, joker in pairs(G.P_CENTER_POOLS.Joker) do
+        if (
+            (
+                not only_vanilla
+                and (joker.original_mod or {}).id == "entr"
+            ) or (
+                incl_vanilla
+                and not joker.original_mod
+            )
+        ) and not joker.no_collection then
+            local rarity = joker.rarity
+            total = total + 1
+            rarities[rarity] = (rarities[rarity] or 0) + 1
+        end
+    end
+    for rarity_key, rarity_count in pairs(rarities) do
+        local format = "%s = %s = %s%%"
+        local rarity_ratio = rarity_count/total*100
+        print(format:format(rarity_key, rarity_count, rarity_ratio))
+    end
+    print("total: "..total)
+end
+
+--#endregion
+------------------
+
+
+
+
+
+
 
 
 
@@ -889,562 +1591,40 @@ end
 -- UNSORTED --
 --------------
 
--- Get a center that is in a pool.
----@param _type string
----@param twisted any
----@param _rarity string
----@param _noparakmi boolean
----@param soulable boolean
----@param key_append string
-function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soulable, key_append)
-    local center = G.P_CENTERS.b_red
-    local forced_key
-
-    --should pool be skipped with a forced key
-    if not forced_key and soulable and (not G.GAME.banned_keys['c_soul']) then
-        for _, v in ipairs(SMODS.Consumable.legendaries) do
-            if (_type == v.type.key or _type == v.soul_set) and not (G.GAME.used_jokers[v.key] and not SMODS.showman(v.key) and not v.can_repeat_soul) and SMODS.add_to_pool(v, {}) then
-                if pseudorandom('soul_'..v.key.._type..G.GAME.round_resets.ante) > (1 - v.soul_rate) then
-                    if not G.GAME.banned_keys[v.key] then forced_key = v.key end
-                end
-            end
-        end
-        if (_type == 'Tarot' or _type == 'Spectral' or _type == 'Tarot_Planet') and
-        not (G.GAME.used_jokers['c_soul'] and not SMODS.showman("c_soul"))  then
-            if pseudorandom('soul_'.._type..G.GAME.round_resets.ante) > 0.997 then
-                forced_key = 'c_soul'
-            end
-        end
-        if (_type == 'Planet' or _type == 'Spectral') and
-        not (G.GAME.used_jokers['c_black_hole'] and not SMODS.showman("c_black_hole"))  then 
-            if pseudorandom('soul_'.._type..G.GAME.round_resets.ante) > 0.997 then
-                forced_key = 'c_black_hole'
-            end
-        end
-    end
-
-    if _type == 'Base' then 
-        forced_key = 'c_base'
-    end
-    G.GAME.entr_parakmi_bypass = _noparakmi
-    if forced_key and not G.GAME.banned_keys[forced_key] then 
-        center = G.P_CENTERS[forced_key]
-        _type = (center.set ~= 'Default' and center.set or _type)
-    else
-        local _pool, _pool_key = get_current_pool(_type, _rarity, legendary, key_append)
-        center = pseudorandom_element(_pool, pseudoseed(_pool_key))
-        local it = 1
-        while center == 'UNAVAILABLE' do
-            it = it + 1
-            center = pseudorandom_element(_pool, pseudoseed(_pool_key..'_resample'..it))
-        end
-
-        center = G.P_CENTERS[center]
-    end
-    G.GAME.entr_parakmi_bypass = nil
-    return center
-end
-
-function Spectrallib.count_stickers(card)
-    local total = 0
-    local cards = {}
-    local add_self = true
-    for i, v in pairs({G.jokers, G.consumeables, G.hand, G.play, G.deck}) do
-        for i2, v2 in pairs(v.cards) do
-            cards[#cards+1] = v2
-            if v2 == card then add_self = nil end
-        end
-    end
-    if add_self then cards[#cards+1] = card end
-    for i, v in pairs(SMODS.Sticker.obj_table) do
-        for i2, v2 in pairs(cards) do
-            if v2.ability and v2.ability[i] then
-                total = total + 1
-            end
-        end
-    end
-    return total
-end
-
-function Spectrallib.unhighlight(areas) 
-    for i, v in pairs(areas) do
-        v:unhighlight_all()
-    end
-end
-
-function Spectrallib.get_inverse_suit(suit)
-    return ({
-        Diamonds = "Hearts",
-        Hearts = "Diamonds",
-        Clubs = "Spades",
-        Spades = "Clubs"
-    })[suit] or suit
-end
-
-function Spectrallib.get_inverse_rank(rank)
-    return ({
-        ["2"] = "Ace",
-        ["3"] = "King",
-        ["4"] = "Queen",
-        ["5"] = "Jack",
-        ["6"] = "10",
-        ["7"] = "9",
-        ["9"] = "7",
-        ["10"] = "6",
-        ["11"] = "5",
-        ["12"] = "4",
-        ["13"] = "3",
-        ["14"] = "2"
-        --["8"] = 8 duh
-    })[tostring(rank)] or rank
-end
-
-function Spectrallib.randomise_once(card, types, seed, noflip)
-    local mtype = pseudorandom_element(types or {"Enhancement", "Edition", "Seal", "Base"}, pseudoseed(seed or "ihwaz"))    
-    if mtype == "Edition" then
-        local edition = SMODS.poll_edition({guaranteed = true, key = "entr_ihwaz"})
-        card:set_edition(edition)
-        card:juice_up()
-    end
-    if mtype == "Enhancement" then
-        local enhancement = SMODS.poll_enhancement({guaranteed = true, key = seed or "entr_ihwaz"})
-        if not noflip then
-            card:flip()
-        end
-        card:set_ability(G.P_CENTERS[enhancement])
-        if not noflip then
-            card:flip()
-        end
-    end
-    if mtype == "Seal" then
-        local seal = SMODS.poll_seal{guaranteed = true, key = seed or "ihwaz"}
-        card:set_seal(seal)
-        card:juice_up()
-    end
-    if mtype == "Base" then
-        if not noflip then
-            card:flip()
-        end
-        Spectrallib.randomize_rank_suit(card, true, true, seed or "ihwaz")
-        if not noflip then
-            card:flip()
-        end
-    end
-end
-
-function Spectrallib.randomize_rank_suit(card, rank, suit, seed)
-    local ranks = {}
-    local suits = {}
-    if rank then
-        for i, v in pairs(SMODS.Ranks) do
-            if SMODS.add_to_pool(v, {}) then ranks[#ranks+1] = i end
-        end
-    end
-    if suit then
-        for i, v in pairs(SMODS.Suits) do
-            if SMODS.add_to_pool(v, {}) then suits[#suits+1] = i end
-        end
-    end
-    SMODS.change_base(card, pseudorandom_element(suits, pseudoseed(seed)),pseudorandom_element(ranks, pseudoseed(seed)), nil)
-end
-
-function Spectrallib.is_in_shop(key, consumable)
-	local center = G.P_CENTERS[key]
-	if center.hidden or center.no_doe or center.no_collection then
-		return
-	elseif G.GAME.banned_keys[key] or not center.unlocked then
-		return
-	elseif center.set == "Joker" then
-		if type(center.rarity) == "number" and center.rarity <= 3 then
-			return center.unlocked or nil
-		end
-		local rare = ({
-			"Common",
-			"Uncommon",
-			"Rare",
-		})[center.rarity] or center.rarity
-		if
-			SMODS.Rarities[rare]
-			and (
-				SMODS.Rarities[rare].get_weight
-				or (SMODS.Rarities[rare].default_weight and SMODS.Rarities[rare].default_weight > 0)
-			)
-		then
-			return center.unlocked or nil
-		end
-		return nil
-	else
-		if consumable then
-			if center.set == "Tarot" then
-				return G.GAME.tarot_rate * (G.GAME.cry_percrate.tarot / 100) > 0 or nil
-			end
-			if center.set == "Planet" then
-				return G.GAME.planet_rate * (G.GAME.cry_percrate.planet / 100) > 0 or nil
-			end
-			if center.set == "Spectral" then
-				return G.GAME.spectral_rate > 0 or nil
-			end
-			local num = G.GAME.cry_percrate and G.GAME.cry_percrate[center.set:lower()] or 100
-			local val = G.GAME[center.set:lower() .. "_rate"] * ((num or 100) / 100)
-			return val > 0
-		end
-	end
-	return SMODS.add_to_pool(center, {})
-end
-
-function Spectrallib.true_suitless(card)
-    if SMODS.has_no_suit(card) or card.config.center.key == "m_stone" 
-    or card.config.center.overrides_base_rank 
-    or card.base.suit == "entr_nilsuit" 
-    or card.base.value == "entr_nilrank" then return true end
-end
-
-function Spectrallib.played_hands(threshold)
-    local total = 0
-    for i, v in pairs(G.GAME.hands or {}) do
-        if to_big(v.played) > to_big(threshold) then
-            total = total + 1
-        end
-    end
-    return total
-end
-
-function Spectrallib.calculate_ratios(incl_vanilla, only_vanilla)
-    local total = 0
-    local rarities = {}
-    for i, v in pairs(G.P_CENTER_POOLS.Joker) do
-        if (not only_vanilla and v.original_mod and v.original_mod.id == "entr") or (incl_vanilla and not v.original_mod) then
-                if not v.no_collection then
-                total = total + 1
-                if not rarities[v.rarity] then rarities[v.rarity] = 0 end
-                rarities[v.rarity] = rarities[v.rarity] + 1
-            end
-        end
-    end
-    for i, v in pairs(rarities) do
-        print(i.." = "..v.. " = "..(v/total * 100).."%")
-    end
-    print("total: "..total)
-end
-
-function Spectrallib.allow_spawning(center)
-    for i, v in pairs(G.I.CARD) do
-        if v.config and v.config.center and center and v.config.center.key == center.key then return SMODS.showman(center.key) or nil end
-    end
-    return true
-end
-
-function Spectrallib.can_be_pulled(card)
-    local center = card.ability.glitched_crown and G.P_CENTERS[card.ability.glitched_crown[card.glitched_index]] or card.config.center
-    if not card:selectable_from_pack(SMODS.OPENED_BOOSTER) and next(SMODS.find_card("j_entr_oekrep")) and card.ability.consumeable then --should probably have a hookable function like SMODS.showman instead of a hardcoded Oekrep check
-        return not center.hidden and not center.no_select
-    end
-    return not center.no_select and (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].can_be_pulled or center.can_be_pulled) and not center.hidden
-end
-
-function Spectrallib.needs_pull_button(card)
-    local center = card.config.center
-    if not card:selectable_from_pack(SMODS.OPENED_BOOSTER) and next(SMODS.find_card("j_entr_oekrep")) and card.ability.consumeable then
-        return not center.hidden and not center.no_select and localize("b_select")
-    end
-    if not center.no_select and (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].can_be_pulled or center.can_be_pulled) and not center.hidden then
-        local loc = SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].can_be_pulled or center.can_be_pulled
-        return localize(type(loc) == "string" and loc or "b_select")
-    end
-    for i, v in pairs(card.ability.glitched_crown or {}) do
-        local center = G.P_CENTERS[v]
-        if center and not center.no_select and (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].can_be_pulled or center.can_be_pulled) and not center.hidden then
-            local loc = SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].can_be_pulled or center.can_be_pulled
-            return localize(type(loc) == "string" and loc or "b_select")
-        end
-    end
-end
-
-function Spectrallib.needs_use_button(card)
-    local center = card.config.center
-    local center_cant_use = false
-    if not (center.no_use_button or (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].no_use_button)) then
-        center_cant_use = true
-    end
-    for i, v in pairs(card.ability.glitched_crown or {}) do
-        local center = G.P_CENTERS[v]
-        if not (center.no_use_button or (SMODS.ConsumableTypes[center.set] and SMODS.ConsumableTypes[center.set].no_use_button)) then
-            center_cant_use = true
-        end
-    end
-    return center_cant_use
-end
-
-function Spectrallib.reduction_index(card, pool, strict)
-    local i = 0
-    for _, v in pairs(G.P_CENTER_POOLS[pool]) do
-        if card.config and v.key == card.config.center_key then
-            break
-        end
-        i = i + 1
-    end
-    if strict then
-        while G.P_CENTER_POOLS[pool] 
-            and G.P_CENTER_POOLS[pool][i] 
-            and (G.P_CENTER_POOLS[pool][i].no_doe 
-            or G.P_CENTER_POOLS[pool][i].no_collection)
-        do
-            i = i - 1
-        end
-    end
-    if i < 1 then i = 1 end
-    return i
-end
-
-function Spectrallib.reduce_cards(cards, card)
-    if cards.ability then cards = {cards} end
-    Spectrallib.flip_then(cards, function(card)
-        local ind = Spectrallib.reduction_index(card, card.config.center.set, true)
-        if G.P_CENTER_POOLS.Joker[ind] then
-            card:set_ability(G.P_CENTER_POOLS.Joker[ind])
-        end
-        card.area:remove_from_highlighted(card)
-    end)
-end
-
-function Spectrallib.handle_card_limit(area, num)
-    area.config.card_limit = area.config.card_limit + (num or 0)
-    area:handle_card_limit()
-end
-
-function Spectrallib.should_skip_animations(strict)
-    if Talisman and Talisman.config_file.disable_anims then return true end
-    if Handy and Handy.animation_skip and Handy.animation_skip.get_value and Handy.animation_skip.get_value() >= (strict and 4 or 3) then return true end
-end
-
-function Spectrallib.get_random_rare(seed)
-    seed = seed or "entr_rare"
-    local cards = {}
-    for i, v in pairs(G.P_CENTERS) do
-        if SMODS.add_to_pool(v, {}) and v.hidden and not v.no_doe then
-            cards[#cards+1] = v
-        end
-    end
-    return pseudorandom_element(cards, pseudoseed(seed))
-end
-
-function Spectrallib.get_card_pixel_pos(card)
-    return {
-        (G.ROOM.T.x + card.T.x + card.T.w * 0.5) * (G.TILESIZE * G.TILESCALE),
-        (G.ROOM.T.y + card.T.y + card.T.h * 0.5) * (G.TILESIZE * G.TILESCALE),
-    }
-end
-
-function Spectrallib.pythag(a, b)
-    local ax, ay, bx, by = a[1], a[2], b[1], b[2]
-    return math.sqrt(((ax - bx) ^ 2) + ((ay - by) ^ 2))
-end
-
-function Spectrallib.max_diagonal()
-    return Spectrallib.pythag({0, 0}, {love.graphics.getWidth(), love.graphics.getHeight()})
-end
-
-function Spectrallib.get_dummy(center, area, self, silent)
-    local abil = copy_table(center.config) or {}
-    abil.consumeable = copy_table(abil)
-    abil.name = center.name or center.key
-    abil.set = center.set
-    abil.t_mult = abil.t_mult or 0
-    abil.t_chips = abil.t_chips or 0
-    abil.x_mult = abil.x_mult or abil.Xmult or 1
-    abil.extra_value = abil.extra_value or 0
-    abil.d_size = abil.d_size or 0
-    abil.mult = abil.mult or 0
-    abil.effect = center.effect
-    abil.h_size = abil.h_size or 0
-    abil.card_limit = abil.card_limit or 1
-    abil.extra_slots_used = abil.extra_slots_used or 0
-    local eligible_editionless_jokers = {}
-    for i, v in pairs(G.jokers and G.jokers.cards or {}) do
-        if not v.edition then
-            eligible_editionless_jokers[#eligible_editionless_jokers + 1] = v
-        end
-    end
-    local tbl = {
-        ability = abil,
-        config = {
-            center = center,
-            center_key = center.key
-        },
-        juice_up = function(_, ...)
-            return self:juice_up(...)
-        end,
-        start_dissolve = function(_, ...)
-            if not _.silent then
-                return self:start_dissolve(...)
-            end
-        end,
-        remove = function(_, ...)
-            return self:remove(...)
-        end,
-        flip = function(_, ...)
-            return self:flip(...)
-        end,
-        can_use_consumeable = function(self, ...)
-            return Card.can_use_consumeable(self, ...)
-        end,
-        calculate_joker = function(self, ...)
-            return Card.calculate_joker(self, ...)
-        end,
-        can_calculate = function(self, ...)
-            return Card.can_calculate(self, ...)
-        end,
-        set_cost = function(self, ...)
-            Card.set_cost(self, ...)
-        end,
-        calculate_sticker = function(self, ...)
-            Card.calculate_sticker(self, ...)
-        end,
-        base_cost = 1,
-        extra_cost = 0,
-        original_card = self,
-        area = area,
-        added_to_deck = added_to_deck,
-        cost = self.cost,
-        sell_cost = self.sell_cost,
-        eligible_strength_jokers = eligible_editionless_jokers,
-        eligible_editionless_jokers = eligible_editionless_jokers,
-        T = self.T,
-        VT = self.VT,
-        CT = self.CT,
-        silent = silent
-    }
-    for i, v in pairs(Card) do
-        if type(v) == "function" and i ~= "flip_side" then
-            tbl[i] = function(_, ...)
-                return v(self, ...)
-            end
-        end
-    end
-    tbl.set_edition = function(s, ed, ...)
-        Card.set_edition(s, ed, ...)
-    end
-    tbl.get_chip_h_x_mult = function(s, ...)
-        local ret = SMODS.multiplicative_stacking(s.ability.h_x_mult or 1,
-            (not s.ability.extra_enhancement and s.ability.perma_h_x_mult) or 0)
-        return ret
-    end
-    tbl.get_chip_x_mult = function(s, ...)
-        local ret = SMODS.multiplicative_stacking(s.ability.x_mult or 1,
-            (not s.ability.extra_enhancement and s.ability.perma_x_mult) or 0)
-        return ret
-    end
-    tbl.use_consumeable = function(self, ...)
-        self.bypass_echo = true
-        local ret = Card.use_consumeable(self, ...)
-        self.bypass_echo = nil
-    end
-    return tbl
-end
-
-local card_eval_status_text_ref = card_eval_status_text
-function card_eval_status_text(card, ...)
-    return card_eval_status_text_ref(card.original_card or card, ...)
-end
-
-function Spectrallib.concat_strings(tbl)
-    local result = ""
-    for i, v in pairs(tbl) do result = result..v end
-    return result
-end
-
-function Spectrallib.get_by_sortid(id)
-    for i, v in pairs(G.jokers.cards) do
-        if v.sort_id == id then return v end
-    end
-end
-
-function Spectrallib.trigger_enhancement(enh, card)
-    if G.P_CENTERS[enh].demicoloncompat then
-        return G.P_CENTERS[enh]:calculate(card, {forcetrigger = true})
-    end
-    local lucky = {}
-    if SMODS.pseudorandom_probability(card, 'entr_chameleon', 1, 5) then
-        lucky.mult = 20
-    end
-    if SMODS.pseudorandom_probability(card, 'entr_chameleon', 1, 15) then
-        lucky.money = 20
-    end
-    local funcs = {
-        m_mult = {mult = 4},
-        m_bonus = {chips = 30},
-        m_glass = {xmult = 2},
-        m_steel = {xmult = 1.5},
-        m_stone = {chips = 50},
-        m_gold = {money=3},
-        m_lucky = lucky
-    }
-    if funcs[enh] then
-        return funcs[enh]
-    end
-end
-
-function Spectrallib.gather_values(card)
-    local total = 0
-    for i, v in pairs(card.ability) do
-        if Spectrallib.is_number(v) and to_big(v) > to_big(1) and i ~= "order" then
-            total = total + v
-        elseif type(v) == "table" then
-            total = total + Spectrallib.gather_values({ability = v})
-        end
-    end
-    return total
-end
-
-function Spectrallib.kind_to_set(kind, c)
-    local check = {
-        Arcana = "Tarot",
-        Celestial = "Planet",
-        Ethereal = "Spectral",
-        Buffoon = "Joker",
-        Inverted = c and "Twisted" or nil
-    }
-    local kind2 = check[kind] or kind
-    check.Inverted = "Twisted"
-    local check2 = check[kind] or kind
-    if not G.P_CENTER_POOLS[kind2] and not G.P_CENTER_POOLS[check2] then return end
-    return kind2
-end
-
-function Spectrallib.missing_ranks()
-    local ranks = {}
-    for i, v in pairs(SMODS.Ranks) do
-        if not v.original_mod and not v.mod then ranks[v.id] = 0 end
-    end
-    for i, v in pairs(G.playing_cards or {}) do
-        if ranks[v.base.id] then
-            ranks[v.base.id] = ranks[v.base.id] + 1
-        end
-    end
-    local total = 0
-    for i, v in pairs(ranks) do
-        if v == 0 then total = total + 1 end
-    end
-    return total
-end
-
-function Spectrallib.shares_aspect(card1, card2)
-    if card1:get_id() == card2:get_id() then return true end
-    if card1.config.center.set ~= "Default" and card1.config.center.key == card2.config.center.key then return true end
-    if card1.edition and card2.edition and card1.edition.key == card2.edition.key then return true end
-    if card1.seal and card1.seal == card2.seal then return true end
-end
 
 
 
+
+
+
+
+
+
+
+
+---@return boolean|nil
 function Card:is_playing_card()
     if not G.deck or not self then return end
     if self.area == G.play and self.ability.consumeable then return end
-    if (self.area == G.hand or self.area == G.play or self.area == G.discard) and (self.config.center.set == "Default" or self.config.center.set == "Enhanced") then return true end
-    for i, v in pairs(G.playing_cards) do
-        if v == self then return true end
+
+    local valid_areas = {[G.hand]=true, [G.play]=true, [G.discard]=true}
+    local valid_sets  = {["Default"] = true, ["Enhanced"] = true}
+    if (
+        valid_areas[self.area]
+        and valid_sets[self.config.center.set]
+    ) then
+        return true
     end
-    if self.area and self.area.config.view_deck then return true end
+
+    for _, card in pairs(G.playing_cards) do
+        if card == self then
+            return true
+        end
+    end
+
+    if self.area and self.area.config.view_deck then
+        return true
+    end
 end
 
 
@@ -1461,3 +1641,34 @@ Spectrallib.ConsumablePackBlacklist = { --identical to entropy, for some reason 
     p_mupack_multipack4=true,
     p_mupack_multipack5=true,
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Depreciated; please use SMODS.poll_object instead.
+---@deprecated
+function Spectrallib.get_pooled_center(_type, twisted, _rarity, _noparakmi, soulable, key_append)
+    return SMODS.poll_object({
+        type = _type,
+        rarities = {_rarity},
+        append = key_append
+        -- "TODO: how do soul objects fit into this system?" from weights.lua
+    })
+    -- todo: hook SMODS.poll_object to account _noparakmi
+end
+
+-- Depreciated: Please use table.concat instead
+---@deprecated
+function Spectrallib.concat_strings(tbl)
+    return table.concat(tbl)
+end
