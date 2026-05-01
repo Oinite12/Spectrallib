@@ -117,7 +117,7 @@ function Card:unapply_to_run(center)
 		extra = self and self.ability.extra or center and center.config.extra,
 	}
 	local obj = center or self.config.center
-	if obj.unredeem and type(obj.unredeem) == "function" then
+	if type(obj.unredeem) == "function" then
 		obj:unredeem(self)
 		return
 	end
