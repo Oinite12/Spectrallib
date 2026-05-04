@@ -1,7 +1,7 @@
 -- Unapply a voucher and play the corresponding animation.
 ---@return nil
 function Card:unredeem()
-		if self.ability.set == "Voucher" then
+	if self.ability.set == "Voucher" then
 		stop_use()
 		if not self.config.center.discovered then
 			discover_card(self.config.center)
