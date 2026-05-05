@@ -91,8 +91,7 @@ end
 --- @param power integer? Defaults to 0.
 --- @return number
 function Spectrallib.round_power(num, power)
-    local power = power or 0
-
+    power = power or 0
     return Spectrallib.round_nearest(num * 10^-power) * 10^power
 end
 

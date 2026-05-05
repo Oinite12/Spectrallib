@@ -142,21 +142,22 @@ function Spectrallib.eq_discards(mod, instant, silent)
     }
 end
 
---- Multiplies hand levels.
---- @param args table
-function Spectrallib.x_levels(args)
-    -- args.hands
-    -- args.level_up
-    -- args.instant
-    -- args.from
-    -- args.bypass_calculate
-    -- args.colour
+--- @class Spectrallib.x_levels.args
+--- @field level_up number
+--- @field hands? string|string[] Keys of hands to level up.
+--- @field instant? boolean If true, no animation plays when this function is called.
+--- @field from? Card|Card[] A card or set of cards causing the level-up.
+--- @field bypass_calculate? boolean If true, function will not send out calculation contexts.
+--- @field colour? [number, number, number, number] Colour of StatusText.
 
+--- Multiplies hand levels.
+--- @param args Spectrallib.x_levels.args
+function Spectrallib.x_levels(args)
     assert(args, "No arguments given to Spectrallib.x_levels")
     assert(args.level_up, "Must provide amount to Spectrallib.x_levels")
 
     args.hands = args.hands or G.handlist
-    if type(args.hands) == 'string' then args.hands = {args.hands} end
+    if type(args.hands) == 'string' then args.hands = {args.hands --[[@as string]]} end
     if args.from and #args.from < 1 then
         args.from = {args.from}
     end
@@ -175,7 +176,7 @@ function Spectrallib.x_levels(args)
 
     local displayed = false
     local context = {poker_hand_changed = true, card = args.from, slib_x_levels = args.level_up}
-    for _, hand in ipairs(args.hands) do
+    for _, hand in ipairs(args.hands --[[@as string[] ]]) do
         displayed = hand == SMODS.displayed_hand
         local level = G.GAME.hands[hand].level
 
