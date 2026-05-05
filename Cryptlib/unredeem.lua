@@ -1,3 +1,31 @@
+-- supplementary functions to cut down on ui code
+local function unapply_dynatext(args)
+	return DynaText{
+		colours = { G.C.RED }, scale = 0.9,
+		shadow = true, bump = true, float = true,
+
+		string = args.string,
+		rotate = args.rotate,
+		pop_in = args.pop_in / G.SPEEDFACTOR,
+		pop_in_rate = 1.5 * G.SPEEDFACTOR,
+		pitch_shift = args.pitch_shift
+	}
+end
+
+local function unapply_uibox(card, pos, dynatext)
+	return UIBox({
+		definition =
+		{n=G.UIT.ROOT, config={ align="tm", r=0.15, colour=G.C.CLEAR, padding=0.15 }, nodes={
+			{n=G.UIT.O, config={ object=dynatext } },
+		}},
+		config = {
+			align = pos,
+			offset = {x=0, y=0},
+			parent = card
+		},
+	})
+end
+
 -- Unapply a voucher and play the corresponding animation.
 ---@return nil
 function Card:unredeem()
@@ -14,60 +42,26 @@ function Card:unredeem()
 			trigger = "after",
 			delay = 0.4,
 			func = function()
-				top_dynatext = DynaText({
+				top_dynatext = unapply_dynatext{
 					string = localize({
 						type = "name_text",
 						set = self.config.center.set,
 						key = self.config.center.key,
 					}),
-					colours = { G.C.RED },
-					rotate = 1,
-					shadow = true,
-					bump = true,
-					float = true,
-					scale = 0.9,
-					pop_in = 0.6 / G.SPEEDFACTOR,
-					pop_in_rate = 1.5 * G.SPEEDFACTOR,
-				})
-				btm_dynatext = DynaText({
+					rotate = 1, pop_in = 0.6
+				}
+				btm_dynatext = unapply_dynatext{
 					string = localize("cry_unredeemed"),
-					colours = { G.C.RED },
-					rotate = 2,
-					shadow = true,
-					bump = true,
-					float = true,
-					scale = 0.9,
-					pop_in = 1.4 / G.SPEEDFACTOR,
-					pop_in_rate = 1.5 * G.SPEEDFACTOR,
+					rotate = 2, pop_in = 1.4,
 					pitch_shift = 0.25,
-				})
+				}
 
 				self:juice_up(0.3, 0.5)
 				play_sound("card1")
 				play_sound("timpani")
 
-				self.children.top_disp = UIBox({
-					definition =
-					{n=G.UIT.ROOT, config={ align="tm", r=0.15, colour=G.C.CLEAR, padding=0.15 }, nodes={
-						{n=G.UIT.O, config={ object=top_dynatext } },
-					}},
-					config = {
-						align = "tm",
-						offset = {x=0, y=0},
-						parent = self
-					},
-				})
-				self.children.bot_disp = UIBox({
-					definition =
-					{n=G.UIT.ROOT, config={ align="tm", r=0.15, colour=G.C.CLEAR, padding=0.15 }, nodes={
-						{n=G.UIT.O, config={ object=btm_dynatext } },
-					}},
-					config = {
-						align = "bm",
-						offset = {x=0, y=0},
-						parent = self
-					},
-				})
+				self.children.top_disp = unapply_uibox(self, "tm", top_dynatext)
+				self.children.bot_disp = unapply_uibox(self, "bm", btm_dynatext)
 				return true
 			end,
 		}))
