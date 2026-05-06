@@ -50,7 +50,9 @@ local files = {
     {path = "Lemniscate/math", redirect = "Lemniscate"},
     {path = "Lemniscate/stat_mods", redirect = "Lemniscate"},
 
-    {path = "compat/cryptid"},
+    {path = "legacy_compat/cryptid"},
+    {path = "legacy_compat/spectrums"},
+    {path = "legacy_compat/entropy"},
 }
 for i, v in pairs(files) do
     if v.redirect then
