@@ -139,18 +139,55 @@ ascnum["cry_Declare0"]    = declare_check(0)
 ascnum["cry_Declare1"]    = declare_check(1)
 ascnum["cry_Declare2"]    = declare_check(2)
 
-
-
-if not Spectrallib.can_mods_load({"Cryptid"}) then return end
-
-
-
 -- Hook for contentset-activated Ascended Hands
-local splib_ascenable_ref = Spectrallib.ascension_power_enabled
-function Spectrallib.ascension_power_enabled()
-    local ret = splib_ascenable_ref()
-    if not ret then
-        return Spectrallib.enabled("set_cry_poker_hand_stuff")
+if Spectrallib.can_mods_load({"Cryptid"}) then
+    local splib_ascenable_ref = Spectrallib.ascension_power_enabled
+    function Spectrallib.ascension_power_enabled()
+        local ret = splib_ascenable_ref()
+        if not ret then
+            return Spectrallib.enabled("set_cry_poker_hand_stuff")
+        end
+        return ret
     end
-    return ret
+end
+
+-- Nostalgic Deck support for deck redeeming
+Spectrallib.deck_config_apply_effects["cry_beta"] = function (deck_center, value)
+    local cards = {}
+    for _,area in ipairs({G.jokers, G.consumeables}) do
+        for _,held_card in ipairs(area.cards) do
+            table.insert(cards, held_card)
+        end
+    end
+
+    for _,held_card in pairs(cards) do
+        held_card.area:remove_card(held_card)
+        held_card:remove_from_deck()
+    end
+
+    local count = G.consumeables.config.card_limit
+    G.consumeables:remove()
+    count = count + G.jokers.config.card_limit
+    G.jokers:remove()
+    G.consumeables = nil
+
+    local CAI = {
+        discard_W     = G.CARD_W,     discard_H     = G.CARD_H,
+        deck_W        = 1.1*G.CARD_W, deck_H        = 0.95*G.CARD_H,
+        hand_W        = 6.0*G.CARD_W, hand_H        = 0.95*G.CARD_H,
+        play_W        = 5.3*G.CARD_W, play_H        = 0.95*G.CARD_H,
+        joker_W       = 4.9*G.CARD_W, joker_H       = 0.95*G.CARD_H,
+        consumeable_W = 2.3*G.CARD_W, consumeable_H = 0.95*G.CARD_H
+    }
+    G.jokers = CardArea(
+        CAI.consumeable_W, 0,
+        CAI.joker_W + CAI.consumeable_W,
+        CAI.joker_H,
+        {card_limit = count, type = 'joker', highlight_limit = 1e100}
+    )
+    G.consumeables = G.jokers
+    for _, held_card in pairs(cards) do
+        held_card:add_to_deck()
+        G.jokers:emplace(held_card)
+    end
 end
