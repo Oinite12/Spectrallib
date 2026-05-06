@@ -1,3 +1,16 @@
+local function suit_mult(card, context)
+    return { mult = card.ability.extra.s_mult }
+end
+local function hand_mult(card, context)
+    return { mult = card.ability.t_mult }
+end
+local function hand_chips(card, context)
+    return { chips = card.ability.t_chips }
+end
+local function hand_xmult(card, context)
+    return { xmult = card.ability.x_mult }
+end
+
 -- Forcetrigger results for Vanilla Jokers
 -- (You should really be using context.forcetrigger in Joker calculation)
 ---@type { [string]: fun(card: Card, context: table): table|nil }
@@ -6,48 +19,20 @@ Spectrallib.vanilla_forcetrigger_results = {
     ["Joker"] = function (card, context)
         return { mult = card.ability.mult }
     end,
-    ["Greedy Joker"] = function (card, context)
-        return { mult = card.ability.extra.s_mult }
-    end,
-    ["Lusty Joker"] = function (card, context)
-        return { mult = card.ability.extra.s_mult }
-    end,
-    ["Wrathful Joker"] = function (card, context)
-        return { mult = card.ability.extra.s_mult }
-    end,
-    ["Gluttonous Joker"] = function (card, context)
-        return { mult = card.ability.extra.s_mult }
-    end,
-    ["Jolly Joker"] = function (card, context)
-        return { mult = card.ability.t_mult }
-    end,
-    ["Zany Joker"] = function (card, context)
-        return { mult = card.ability.t_mult }
-    end,
-    ["Mad Joker"] = function (card, context)
-        return { mult = card.ability.t_mult }
-    end,
-    ["Crazy Joker"] = function (card, context)
-        return { mult = card.ability.t_mult }
-    end,
-    ["Droll Joker"] = function (card, context)
-        return { mult = card.ability.t_mult }
-    end,
-    ["Sly Joker"] = function (card, context)
-        return { chips = card.ability.t_chips }
-    end,
-    ["Wily Joker"] = function (card, context)
-        return { chips = card.ability.t_chips }
-    end,
-    ["Clever Joker"] = function (card, context)
-        return { chips = card.ability.t_chips }
-    end,
-    ["Devious Joker"] = function (card, context)
-        return { chips = card.ability.t_chips }
-    end,
-    ["Crafty Joker"] = function (card, context)
-        return { chips = card.ability.t_chips }
-    end,
+    ["Greedy Joker"]     = suit_mult,
+    ["Lusty Joker"]      = suit_mult,
+    ["Wrathful Joker"]   = suit_mult,
+    ["Gluttonous Joker"] = suit_mult,
+    ["Jolly Joker"]      = hand_mult,
+    ["Zany Joker"]       = hand_mult,
+    ["Mad Joker"]        = hand_mult,
+    ["Crazy Joker"]      = hand_mult,
+    ["Droll Joker"]      = hand_mult,
+    ["Sly Joker"]        = hand_chips,
+    ["Wily Joker"]       = hand_chips,
+    ["Clever Joker"]     = hand_chips,
+    ["Devious Joker"]    = hand_chips,
+    ["Crafty Joker"]     = hand_chips,
     --#endregion
     --#region Page 2
     ["Half Joker"] = function (card, context)
@@ -554,7 +539,7 @@ Spectrallib.vanilla_forcetrigger_results = {
             end,
         }))
     end,
-    ["Trading Card"] = function ()
+    ["Trading Card"] = function (card, context)
         ease_dollars(card.ability.extra)
     end,
     ["Flash Card"] = function (card, context)
@@ -598,11 +583,11 @@ Spectrallib.vanilla_forcetrigger_results = {
     end,
     -- Mr Bones
     ["Acrobat"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     -- Sock and Buskin
     ["Swashbuckler"] = function (card, context)
-        return { mult = card.ability.mult, card = card }
+        return { mult = card.ability.mult }
     end,
     ["Troubadour"] = function (card, context)
         G.hand:change_size(card.ability.extra.h_size)
@@ -631,29 +616,29 @@ Spectrallib.vanilla_forcetrigger_results = {
     end,
     -- Smeared Joker
     ["Throwback"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
+        return { xmult = card.ability.x_mult }
     end,
     -- Hanging Chad
     ["Rough Gem"] = function (card, context)
         ease_dollars(card.ability.extra)
     end,
     ["Bloodstone"] = function (card, context)
-        return { xmult = card.ability.extra.Xmult, card = card }
+        return { xmult = card.ability.extra.Xmult }
     end,
     ["Arrowhead"] = function (card, context)
-        return { chips = card.ability.extra, card = card }
+        return { chips = card.ability.extra }
     end,
     ["Onyx Agate"] = function (card, context)
-        return { mult = card.ability.extra, card = card }
+        return { mult = card.ability.extra }
     end,
     ["Glass Joker"] = function (card, context)
         card.ability.x_mult = card.ability.x_mult + card.ability.extra
-        return { xmult = card.ability.x_mult, card = card }
+        return { xmult = card.ability.x_mult }
     end,
     --#endregion
     --#region Page 9
     ["Flower Pot"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     ["Blueprint"] = function (card, context)
         local my_pos = card.rank
@@ -668,7 +653,7 @@ Spectrallib.vanilla_forcetrigger_results = {
     end,
     ["Wee Joker"] = function (card, context)
         card.ability.extra.chips = card.ability.extra.chips + card.ability.extra.chip_mod
-        return { chips = card.ability.extra.chips, card = card }
+        return { chips = card.ability.extra.chips }
     end,
     ["Merry Andy"] = function (card, context)
         ease_discard(card.ability.d_size)
@@ -676,42 +661,28 @@ Spectrallib.vanilla_forcetrigger_results = {
     end,
     -- Oops! All 6s
     ["The Idol"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     ["Seeing Double"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     ["Matador"] = function (card, context)
         ease_dollars(card.ability.extra)
     end,
     ["Hit The Road"] = function (card, context)
         card.ability.x_mult = card.ability.x_mult + card.ability.extra
-        return { xmult = card.ability.x_mult, card = card }
+        return { xmult = card.ability.x_mult }
     end,
-    ["The Duo"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
-    end,
-    ["The Trio"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
-
-    end,
-    ["The Family"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
-
-    end,
-    ["The Order"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
-
-    end,
-    ["The Tribe"] = function (card, context)
-        return { xmult = card.ability.x_mult, card = card }
-
-    end,
+    ["The Duo"]    = hand_xmult,
+    ["The Trio"]   = hand_xmult,
+    ["The Family"] = hand_xmult,
+    ["The Order"]  = hand_xmult,
+    ["The Tribe"]  = hand_xmult,
     --#endregion
     --#region Page 10
     ["Stuntman"] = function (card, context)
         G.hand:change_size(-card.ability.extra.h_size)
-        results = { jokers = { chips = card.ability.extra.chip_mod, card = card } }
+        return { chips = card.ability.extra.chip_mod }
     end,
     ["Invisible Joker"] = function (card, context)
         -- could be cleaned but idk
@@ -763,10 +734,10 @@ Spectrallib.vanilla_forcetrigger_results = {
         ease_dollars(card.ability.extra * (planets_used or 1))
     end,
     ["Shoot The Moon"] = function (card, context)
-        return  { mult = 13, card = card }
+        return  { mult = 13 }
     end,
     ["Driver's License"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     ["Cartomancer"] = function (card, context)
         G.E_MANAGER:add_event(Event({
@@ -804,14 +775,14 @@ Spectrallib.vanilla_forcetrigger_results = {
     end,
     ["Caino"] = function (card, context)
         card.ability.caino_xmult = card.ability.caino_xmult + card.ability.extra
-        return { xmult = card.ability.caino_xmult, card = card }
+        return { xmult = card.ability.caino_xmult }
     end,
     ["Triboulet"] = function (card, context)
-        return { xmult = card.ability.extra, card = card }
+        return { xmult = card.ability.extra }
     end,
     ["Yorick"] = function (card, context)
         card.ability.x_mult = card.ability.x_mult + card.ability.extra.xmult
-        return { xmult = card.ability.x_mult, card = card }
+        return { xmult = card.ability.x_mult }
     end,
     ["Chicot"] = function (card, context)
         if G.GAME.blind and G.GAME.blind:get_type() == "Boss" then
