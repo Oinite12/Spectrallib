@@ -209,18 +209,16 @@ function Spectrallib.calculate_ascension_modification(args)
     G.GAME.asc_power_hand = apply_func(G.GAME.asc_power_hand, amount)
 
     -- Set the text in the ascension power window
-    local text = number_format(G.GAME.asc_power_hand)
-    local settxt = function ()
-        local text_format = "(%s%s)"
-        local optional_plus = G.GAME.asc_power_hand < 0 and "+" or ""
-        G.GAME.current_round.current_hand.cry_asc_num_text = text_format:format(optional_plus, text)
-        return true
-    end
-    if not Spectrallib.should_skip_animations() then
-        G.E_MANAGER:add_event(Event{ func = settxt })
-    else
-        settxt()
-    end
+    Spectrallib.event{
+        function ()
+            local text = number_format(G.GAME.asc_power_hand)
+            local text_format = "(%s%s)"
+            local optional_plus = G.GAME.asc_power_hand < 0 and "+" or ""
+            G.GAME.current_round.current_hand.cry_asc_num_text = text_format:format(optional_plus, text)
+            return true
+        end,
+        instant = Spectrallib.should_skip_animations()
+    }
 
     -- Update chips/mult to reflect new power
     local temp = card_eval_status_text
