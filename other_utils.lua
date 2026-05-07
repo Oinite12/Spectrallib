@@ -125,7 +125,7 @@ function Spectrallib.redeem_animation(card, cfg)
         trigger = 'after',
         delay = 2.6
     }
-    Spectrallib{
+    Spectrallib.event{
         function ()
             card.children.top_disp:remove()
             card.children.top_disp = nil
