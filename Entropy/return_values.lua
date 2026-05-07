@@ -305,15 +305,12 @@ end
 local e_round = end_round
 function end_round()
     e_round()
-    G.E_MANAGER:add_event(Event({
-        trigger = 'immediate',
-        func = (function()
-            G.GAME.asc_power_hand = 0
-            G.GAME.current_round.current_hand.cry_asc_num = 0
-            G.GAME.current_round.current_hand.cry_asc_num_text = ''
-            return true
-        end)
-    }))
+    Spectrallib.event(function ()
+        G.GAME.asc_power_hand = 0
+        G.GAME.current_round.current_hand.cry_asc_num = 0
+        G.GAME.current_round.current_hand.cry_asc_num_text = ''
+        return true
+    end)
 end
 
 local play_ref = G.FUNCS.play_cards_from_highlighted

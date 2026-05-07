@@ -133,6 +133,9 @@ return {
 			cry_balanced_q = "Balanced...?",
 			slib_forcetrigger_ex = "Forcetrigger!",
 			slib_plus_consumable = "+1 Consumable",
+
+			k_level_chips = "Chips per level",
+			k_level_mult = "Mult per level",
         },
         v_dictionary = {
         	a_xchips = "X#1# Chips",

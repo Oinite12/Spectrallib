@@ -1230,7 +1230,7 @@ function Spectrallib.allow_spawning(center)
 end
 
 -- Determine if animations should be skipped.
----@param strict boolean If true, Handy animation skip value must be at least 4 ("skip everything") (instead of 3 ("skip animations")).
+---@param strict? boolean If true, Handy animation skip value must be at least 4 ("skip everything") (instead of 3 ("skip animations")).
 ---@return boolean
 function Spectrallib.should_skip_animations(strict)
     local talisman_check = Talisman and Talisman.config_file.disable_anims

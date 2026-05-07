@@ -9,17 +9,19 @@ local function uht_snd(volume, pitch, delay)
     }
 end
 
-local function juice_card_event(card)
-    G.E_MANAGER:add_event(Event({
-        trigger = 'after',
-        delay = 0.9,
-        func = function()
+local function JUICE_CARD_EVENT(card, delay)
+    Spectrallib.event{
+        function ()
             play_sound('tarot1')
-            if card then card:juice_up(0.8, 0.5) end
+            if card and card.juice_up then
+                card:juice_up(0.8, 0.5)
+            end
             G.TAROT_INTERRUPT_PULSE = nil
             return true
-        end
-    }))
+        end,
+        trigger = 'after',
+        delay = delay or 0.9
+    }
 end
 
 local function generate_suit_bonus_tbl(card, suit_key)
@@ -115,21 +117,21 @@ function Spectrallib.level_suit(suit, card, level_amt, chips_override, mult, ins
     suit_values.chips = suit_values.chips + (chips_override or 10)*level_amt
     suit_values.mult  = suit_values.mult  + (mult or 0)*level_amt
 
-    juice_card_event(card)
+    JUICE_CARD_EVENT(card)
     if chips_override ~= 0 then
         update_hand_text(uht_snd(0.7, 0.9, 0), {
             chips = "+" .. number_format((chips_override or 10)*level_amt),
             StatusText = true
         })
     end
-    juice_card_event(card)
+    JUICE_CARD_EVENT(card)
     if mult then
         update_hand_text(uht_snd(0.7, 0.9, 0), {
             mult = "+" .. number_format(mult*level_amt),
             StatusText = true
         })
     end
-    juice_card_event(card)
+    JUICE_CARD_EVENT(card)
     update_hand_text(uht_snd(0.7, 0.9, 0), {
         level = suit_values.level,
         chips = not hide.chips and number_format(suit_values.chips) or nil,

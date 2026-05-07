@@ -44,6 +44,7 @@ local files = {
     {path = "Entropy/suit_levels", redirect = "Entropy"},
     {path = "Entropy/return_values", redirect = "Entropy"},
     {path = "Entropy/deck_redeeming", redirect = "Entropy"},
+    {path = "Entropy/deck_redeeming__vanilladef", redirect = "Entropy"},
     {path = "Entropy/card_buttons", redirect = "Entropy"},
 
     {path = "Lemniscate/utils", redirect = "Lemniscate"},
@@ -53,6 +54,7 @@ local files = {
     {path = "legacy_compat/cryptid"},
     {path = "legacy_compat/spectrums"},
     {path = "legacy_compat/entropy"},
+    {path = "legacy_compat/misc"},
 }
 for i, v in pairs(files) do
     if v.redirect then
