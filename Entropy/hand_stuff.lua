@@ -185,16 +185,42 @@ end
 ---@param instant? boolean If true, skips animations.
 ---@return nil
 function Spectrallib.l_asc(hand, card, asc_power, instant)
-    local chips_color, mult_color
-    if not instant then
-        chips_color = copy_table(G.C.UI_CHIPS)
-        mult_color = copy_table(G.C.UI_MULT)
-        delay(0.4)
-        update_hand_text(uht_snd(0.7, 0.8, 0.3), {
-            handname = localize(hand,'poker_hands'),
-            chips = "...", mult = "...", level = "..."
-        })
+    if instant then
+        local chips = Spectrallib.ascend_hand(G.GAME.hands[hand].chips, hand)
+        local mult = Spectrallib.ascend_hand(G.GAME.hands[hand].mult, hand)
+        G.GAME.hands[hand].AscensionPower = to_big((G.GAME.hands[hand].AscensionPower or 0)) + asc_power
+        chips = Spectrallib.ascend_hand(G.GAME.hands[hand].chips, hand) - chips
+        mult = Spectrallib.ascend_hand(G.GAME.hands[hand].mult, hand) - mult
+        if G.entr_add_to_stats then
+            SMODS.Scoring_Parameters.chips.current = SMODS.Scoring_Parameters.chips.current + chips
+            SMODS.Scoring_Parameters.mult.current = SMODS.Scoring_Parameters.mult.current + mult
+        end
+
+        if (
+            card and card.edition
+            and ((asc_power or 1) > 0)
+            and not noengulf and Engulf
+        ) then
+            if Engulf.SpecialFuncs[card.config.center.key] then 
+            else
+                Engulf.EditionHand(card, hand, card.edition, asc_power, instant)
+            end
+        end
+
+        G.hand:parse_highlighted()
+        G.GAME.current_round.current_hand.cry_asc_num = 0
+        G.GAME.current_round.current_hand.cry_asc_num_text = ""
+
+        return
     end
+
+    local chips_color = copy_table(G.C.UI_CHIPS)
+    local mult_color = copy_table(G.C.UI_MULT)
+    delay(0.4)
+    update_hand_text(uht_snd(0.7, 0.8, 0.3), {
+        handname = localize(hand,'poker_hands'),
+        chips = "...", mult = "...", level = "..."
+    })
 
     local chips = Spectrallib.ascend_hand(G.GAME.hands[hand].chips, hand)
     local mult = Spectrallib.ascend_hand(G.GAME.hands[hand].mult, hand)
@@ -206,37 +232,35 @@ function Spectrallib.l_asc(hand, card, asc_power, instant)
         SMODS.Scoring_Parameters.mult.current = SMODS.Scoring_Parameters.mult.current + mult
     end
 
-    if not instant then
-        Spectrallib.event(1.0)
-        Spectrallib.event{
-            function ()
-                play_sound("tarot1")
-                ease_colour(G.C.UI_CHIPS, HEX("ffb400"), 0.1)
-                ease_colour(G.C.UI_MULT, HEX("ffb400"), 0.1)
-                Spectrallib.pulse_flame(0.01, sunlevel) -- todo: figure where sunlevel is form
-                if card and card.juice_up then card:juice_up(0.8, 0.5) end
-                G.E_MANAGER:add_event(Event({
-                    trigger = "after",
-                    blockable = false,
-                    blocking = false,
-                    delay = 1.2,
-                    func = function()
-                    ease_colour(G.C.UI_CHIPS, chips_color, 1)
-                    ease_colour(G.C.UI_MULT, mult_color, 1)
-                    return true
-                    end,
-                }))
+    Spectrallib.event(1.0)
+    Spectrallib.event{
+        function ()
+            play_sound("tarot1")
+            ease_colour(G.C.UI_CHIPS, HEX("ffb400"), 0.1)
+            ease_colour(G.C.UI_MULT, HEX("ffb400"), 0.1)
+            Spectrallib.pulse_flame(0.01, sunlevel) -- todo: figure where sunlevel is form
+            if card and card.juice_up then card:juice_up(0.8, 0.5) end
+            G.E_MANAGER:add_event(Event({
+                trigger = "after",
+                blockable = false,
+                blocking = false,
+                delay = 1.2,
+                func = function()
+                ease_colour(G.C.UI_CHIPS, chips_color, 1)
+                ease_colour(G.C.UI_MULT, mult_color, 1)
                 return true
-            end,
-            trigger = "after",
-            delay = 0.2
-        }
+                end,
+            }))
+            return true
+        end,
+        trigger = "after",
+        delay = 0.2
+    }
 
-        update_hand_text(uht_snd(0.7, 0.9, 0), {
-            level = (asc_power > 0 and "+" or "")..number_format(asc_power)
-        })
-        delay(1.6)
-    end
+    update_hand_text(uht_snd(0.7, 0.9, 0), {
+        level = (asc_power > 0 and "+" or "")..number_format(asc_power)
+    })
+    delay(1.6)
 
     if (
         card and card.edition
@@ -249,14 +273,12 @@ function Spectrallib.l_asc(hand, card, asc_power, instant)
         end
     end
 
-    if not instant then
-        delay(1.6)
-        update_hand_text(uht_snd(0.7, 1.1, 0), {
-            mult = 0, chips = 0,
-            handname = "", level = ""
-        })
-        delay(1)
-    end
+    delay(1.6)
+    update_hand_text(uht_snd(0.7, 1.1, 0), {
+        mult = 0, chips = 0,
+        handname = "", level = ""
+    })
+    delay(1)
 
     G.hand:parse_highlighted()
     G.GAME.current_round.current_hand.cry_asc_num = 0
