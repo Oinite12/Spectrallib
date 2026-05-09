@@ -22,10 +22,10 @@ end
 
 local files = {
 
-    {path = "other_utils"},
-    {path = "blind_functions"},
-    {path = "modpage_ui"},
-    {path = "attributes"},
+    {path = "Spectrallib/other_utils"},
+    {path = "Spectrallib/blind_functions"},
+    {path = "Spectrallib/modpage_ui"},
+    {path = "Spectrallib/attributes"},
 
     {path = "Cryptlib/main", redirect = "Cryptid"},
     {path = "Cryptlib/utilities", redirect = "Cryptid"},
