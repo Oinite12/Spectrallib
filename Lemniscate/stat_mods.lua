@@ -2,6 +2,7 @@
 --- @param mod number
 --- @param instant boolean? If true, triggers immediately instead of as an event.
 --- @param silent boolean? If true, does not play a sound effect.
+--- @return nil
 function Spectrallib.x_hands_played(mod, instant, silent)
     local _mod = function(modd)
         modd = modd or 1
@@ -38,6 +39,7 @@ end
 --- @param mod number
 --- @param instant boolean? If true, triggers immediately instead of as an event.
 --- @param silent boolean? If true, does not play a sound effect.
+--- @return nil
 function Spectrallib.x_discards(mod, instant, silent)
     local _mod = function(modd)
         modd = modd or 1
@@ -74,6 +76,7 @@ end
 --- @param mod number
 --- @param instant boolean? If true, triggers immediately instead of as an event.
 --- @param silent boolean? If true, does not play a sound effect.
+--- @return nil
 function Spectrallib.eq_hands(mod, instant, silent)
     local _mod = function(modd)
         modd = modd or 0
@@ -110,6 +113,7 @@ end
 --- @param mod number
 --- @param instant boolean? If true, triggers immediately instead of as an event.
 --- @param silent boolean? If true, does not play a sound effect.
+--- @return nil
 function Spectrallib.eq_discards(mod, instant, silent)
     local _mod = function(modd)
         modd = modd or 0
@@ -150,8 +154,9 @@ end
 --- @field bypass_calculate? boolean If true, function will not send out calculation contexts.
 --- @field colour? [number, number, number, number] Colour of StatusText.
 
---- Multiplies hand levels.
+--- Multiplies hand levels by 2.
 --- @param args Spectrallib.x_levels.args
+--- @return nil
 function Spectrallib.x_levels(args)
     assert(args, "No arguments given to Spectrallib.x_levels")
     assert(args.level_up, "Must provide amount to Spectrallib.x_levels")

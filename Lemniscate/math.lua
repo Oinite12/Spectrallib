@@ -69,8 +69,10 @@ end
 
 --- Creates a pair of normally-distributed pseudorandom numbers using the Box-Muller transform.
 --- @param seed string The random seed used.
---- @param mean number? The normal distribution's mean. Defaults to 0.
---- @param stdev number? The normal distribution's standard deviation. Defaults to 1.
+--- @param mean number The normal distribution's mean. Defaults to 0.
+--- @param stdev number The normal distribution's standard deviation. Defaults to 1.
+--- @return number
+--- @return number
 function Spectrallib.pseudorandom_normal(seed, mean, stdev)
     local theta = 2 * math.pi * pseudorandom(seed)
     local r = math.sqrt(-2 * math.log(pseudorandom(seed)))
@@ -82,6 +84,7 @@ end
 --- Returns 1 if `x` is positive, -1 if x is negative
 --- Returns 0 if `x` == 0, so float -0 isn't treated as negative here
 --- @param x number
+--- @return number
 function Spectrallib.sign(x)
     -- fast math.sign for luaJIT
     -- from stack overflow: https://stackoverflow.com/a/64878952

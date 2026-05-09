@@ -190,6 +190,7 @@ end
 --#region INTERNAL UTILITIES --
 -------------------------------
 
+-- Merge the contents of two lists into a new list; the returned list has the contents of `t1` then `t2`.
 ---@param t1 any[]
 ---@param t2 any[]
 ---@return any[]
@@ -197,7 +198,6 @@ function Spectrallib.table_merge(t1, t2)
 	local tbl = {}
 	for _,v in pairs(t1) do
 		table.insert(tbl, v)
-		tbl[#tbl + 1] = v
 	end
 	for _, v in pairs(t2) do
 		table.insert(tbl, v)
@@ -205,8 +205,9 @@ function Spectrallib.table_merge(t1, t2)
 	return tbl
 end
 
--- Descend a table of tables by following a list of keys;
--- returns the value corresponding to the last key if none of the keys correspond to nil, otherwise returns false.
+-- Descend a deeply nested table by following a list of keys.<br>
+-- If at any point a key is assigned `nil`, returns `false`;<br>
+-- otherwise returns the value assigned to the last listed key.
 ---@param t table
 ---@param ... any
 ---@return table|any|false
@@ -223,7 +224,7 @@ end
 
 -- Fully copies a table and its tables recursively.
 ---@param obj table
----@param seen? table Used internally
+---@param seen? table Used within the function itself.
 ---@return table
 function Spectrallib.deep_copy(obj, seen)
 	if type(obj) ~= "table" then return obj end
@@ -238,7 +239,7 @@ function Spectrallib.deep_copy(obj, seen)
 	return res
 end
 
--- Evaluate plural notation for a localization string.
+-- Evaluate plural notation, e.g. #<s>1#, #<ies,y>2#.
 ---@param str string
 ---@param vars any[]
 ---@return string
@@ -314,7 +315,7 @@ function Spectrallib.pluralize(str, vars)
 	end
 end
 
--- Restricts the input within a range.
+-- Restricts the input within the range `[min,max]`.
 ---@param x number
 ---@param min number
 ---@param max number
@@ -323,10 +324,12 @@ function Spectrallib.clamp(x, min, max)
     return math.max(min, math.min(x, max))
 end
 
--- Covnerts a list of items into a table with keys being the list of items.
+-- Converts a list of items into a table with keys being the items in the given list,<br>
+-- effectively converting a list into a set.
+---@generic Spectrallib.list_to_keys.T
 ---@param list any[]
----@param all_values any The value that all keys map to. nil defaults to true.
----@return {any: any}
+---@param all_values? Spectrallib.list_to_keys.T The value that all keys map to. nil defaults to true.
+---@return {any: Spectrallib.list_to_keys.T}
 function Spectrallib.list_to_keys(list, all_values)
 	if type(list) ~= table then return {} end
 	if all_values == nil then all_values = true end
@@ -363,15 +366,15 @@ Spectrallib.with_deck_effects = Spectrallib.deck_effects
 --#region BOOLEAN FUNCTIONS --
 ------------------------------
 
--- Determines if a Joker can contain BigNumber values. (I think)
----@param joker table
+-- Determines if a card can contain BigNumber values. (I think)
+---@param card Card
 ---@return boolean
-function Spectrallib.is_card_big(joker)
+function Spectrallib.is_card_big(card)
 	if not Spectrallib.can_mods_load({'Talisman'}) then
 		return false
 	end
 
-	local center = joker.config and joker.config.center
+	local center = card.config and card.config.center
 	if not center then
 		return false
 	end
@@ -404,7 +407,7 @@ function Spectrallib.no(center, m, key, no_no)
 	return Spectrallib.no(center, "no_" .. m, key, true)
 end
 
--- Truthy if input is a number or BigNumber.
+-- Truthy if input is a number/BigNumber.
 ---@param x any
 ---@return boolean
 function Spectrallib.is_number(x)
@@ -430,13 +433,25 @@ end
 ---@param ignore Card|table A card to exclude from the highlighted list.
 ---@param min number
 ---@param max number If the count of highlighted cards exceeds this value, returned table will be a max-sized list of randomly selected highlighted cards.
----@param blacklist? fun(card: Card): boolean Function returns true if it should be part of the highlighted list.
+---@param blacklist? string[]|(fun(card: Card): boolean) If function returns true, card is included into the highlighted list. Table entries are keys of centers to exclude.
 ---@param seed? string|any Can be used alongside the `max` parameter.
 ---@return Card[]
 function Spectrallib.get_highlighted_cards(areas, ignore, min, max, blacklist, seed)
+	ignore = ignore or {}
 	ignore.checked = true
-	blacklist = blacklist or function()
-		return true
+	min = min or 1
+	max = max or 1
+	-- Convert blacklist tables to function
+	if type(blacklist) == "table" then
+		blacklist = function (card)
+			local center_key = card.config.center.key
+			-- blacklist is (formerly) table; its reference saved by this new function
+			return not blacklist[center_key]
+		end
+	else -- function or nil
+		blacklist = blacklist or function()
+			return true
+		end
 	end
 
 	local highlighted_cards = {}
@@ -500,7 +515,7 @@ end
 
 -- Gets a random edition.<br>
 -- (Used by Antimatter Deck (Cryptid))
----@return table
+---@return { string: true } # String is the key of the edition.
 function Spectrallib.poll_random_edition()
 	local random_edition = pseudorandom_element(G.P_CENTER_POOLS.Edition, pseudoseed("cry_ant_edition"))
 	while random_edition.key == "e_base" do
@@ -515,12 +530,13 @@ end
 ---@param seed? string|any
 ---@param excluded_flags? string[] Defaults to {"hidden", "no_doe", "no_grc"}
 ---@param banned_card? string
----@param pool? table
+---@param pool? SMODS.Consumable[]
 ---@param no_undiscovered? boolean
----@return table -- Consumable definition.
+---@return SMODS.Consumable -- Consumable definition.
 function Spectrallib.random_consumable(seed, excluded_flags, banned_card, pool, no_undiscovered)
 	-- set up excluded flags - these are the kinds of consumables we DON'T want to have generating
 	excluded_flags = excluded_flags or { "hidden", "no_doe", "no_grc" }
+	pool = pool or G.P_CENTER_POOLS.Consumeables
 
 	local selected_card
 	local tries = 500
@@ -529,7 +545,7 @@ function Spectrallib.random_consumable(seed, excluded_flags, banned_card, pool, 
 		local passed_flag_count = 0
 
 		-- create a random consumable naively
-		local consumable_key = pseudorandom_element(pool or G.P_CENTER_POOLS.Consumeables, pseudoseed(seed or "grc")).key
+		local consumable_key = pseudorandom_element(pool, pseudoseed(seed or "grc")).key
 		selected_card = G.P_CENTERS[consumable_key]
 
 		-- banned_card = nil makes this always false
@@ -564,6 +580,7 @@ end
 ---@param ability? string|string[]
 ---@param non_debuff? boolean If true, include debuffed Jokers in the search.
 ---@param area? "j"|"c" If "j", search Jokers. If "c", search consumables. Otherwise, search does not occur.
+---@return Card[]
 function Spectrallib.advanced_find_joker(name, rarity, edition, ability, non_debuff, area)
 	if not G.jokers or not G.jokers.cards then
 		return {}
@@ -658,8 +675,8 @@ end
 -----------------------------
 
 -- Pulses the flames on chips and mult temporarily.
----@param duration number duration of the pulse in seconds
----@param intensity number intensity of the flames in idfk, it increases pretty quickly though
+---@param duration? number duration of the pulse in seconds
+---@param intensity? number intensity of the flames in idfk, it increases pretty quickly though
 function Spectrallib.pulse_flame(duration, intensity)
 	G.cry_flame_override = G.cry_flame_override or {}
 	G.cry_flame_override["duration"] = duration or 0.01
@@ -703,6 +720,8 @@ Spectrallib.scoring_window_pulse_targets = {
 	{G.C.UI_CHIPS, G.C.BLUE},
 }
 
+-- Resets the Poker Hand information to be for nothing (not None).
+---@return nil
 function Spectrallib.reset_to_none()
 	update_hand_text({delay = 0}, {mult = 0, chips = 0, handname = '', level = ''})
 end

@@ -39,6 +39,7 @@ local files = {
     {path = "Cryptlib/unredeem__vanilladef", redirect = "Cryptid"},
     {path = "Cryptlib/colours"}, -- this doesn't have an equivalent in cryptid currently
 
+    {path = "Entropy/main", redirect = "Entropy"},
     {path = "Entropy/utils", redirect = "Entropy"},
     {path = "Entropy/hand_stuff", redirect = "Entropy"},
     {path = "Entropy/suit_levels", redirect = "Entropy"},

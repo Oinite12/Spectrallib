@@ -188,6 +188,7 @@ end
 
 --- Forces an object's hover description to update
 --- @param obj Moveable|table
+--- @return nil
 function Spectrallib.force_hover_desc_update(obj)
     if obj.states.hover.is and obj.discovered ~= false and obj.locked ~= false then
         obj:stop_hover()

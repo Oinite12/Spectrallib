@@ -1,19 +1,19 @@
-Spectrallib.aliases = {}
-Spectrallib.pointerblist = {}
-Spectrallib.pointerblistrarity = {}
-Spectrallib.mod_gameset_whitelist = {}
-Spectrallib.mod_whitelist = {}
----@type { [string]: integer | fun():(integer|nil) }
-Spectrallib.ascension_numbers = {}
-Spectrallib.rarity_table = {}
-
+-- unused by Spectrallib
 Cryptid_config = {}
 function cry_format(...)
     return ...
 end
+Spectrallib.aliases = {}
+Spectrallib.pointerblist = {}
+Spectrallib.pointerblistrarity = {}
+Spectrallib.rarity_table = {}
+
+-- used by gamesets
+Spectrallib.mod_gameset_whitelist = {}
+-- used by Spectrallib.is_card_big()
+Spectrallib.mod_whitelist = {}
 
 --Ascension numbers for Vanilla hands
-
 ---@param x integer
 ---@return fun(): integer|nil
 local function tether_check(x)
@@ -21,26 +21,28 @@ local function tether_check(x)
         return Spectrallib.has_tether() and x or nil
     end
 end
-
-local ascnum = Spectrallib.ascension_numbers
-ascnum["High Card"]       = tether_check(1)
-ascnum["Pair"]            = tether_check(2)
-ascnum["Three of a Kind"] = tether_check(3)
-ascnum["Four of a Kind"]  = tether_check(4)
-ascnum["Straight"] = function ()
-    return (
-        next(SMODS.find_card("j_four_fingers"))
-        and Spectrallib.gameset() ~= "modest"
-        and 4
-        or 5
-    )
+local function straight_flush()
+	return (
+		next(SMODS.find_card("j_four_fingers"))
+		and Spectrallib.gameset() ~= "modest"
+		and 4
+		or 5
+	)
 end
-ascnum["Flush"] = ascnum["Straight"]
-ascnum["Two Pair"]       = 4
-ascnum["Full House"]     = 5
-ascnum["Five of a Kind"] = 5
-ascnum["Flush House"]    = 5
-ascnum["Flush Five"]     = 5
+---@type { [string]: integer | fun():(integer|nil) }
+Spectrallib.ascension_numbers = {
+	["High Card"]       = tether_check(1),
+	["Pair"]            = tether_check(2),
+	["Three of a Kind"] = tether_check(3),
+	["Four of a Kind"]  = tether_check(4),
+	["Straight"]        = straight_flush,
+	["Flush"]           = straight_flush,
+	["Two Pair"]        = 4,
+	["Full House"]      = 5,
+	["Five of a Kind"]  = 5,
+	["Flush House"]     = 5,
+	["Flush Five"]      = 5,
+}
 
 -- Manipulation types
 ---@type {[string]: fun(initial: number, operand: number|{arrows: number, height: number}, value_key: string): number|nil}

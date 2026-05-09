@@ -2,7 +2,7 @@ local sp_Event = Spectrallib.event
 
 -- How deck config keys should be handled
 -- `deck_center` is the prototype of the deck being redeemed, `value` is the value associated with the config key under `deck_center`
----@type {[string]: fun(deck_center: table, value: any)}
+---@type {[string]: fun(deck_center: SMODS.Center, value: any)}
 Spectrallib.deck_config_apply_effects = {
     hands = function (deck_center, value)
         G.GAME.round_resets.hands = G.GAME.round_resets.hands + value
