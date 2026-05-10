@@ -1,4 +1,5 @@
 Entropy.get_highlighted_cards = Spectrallib.get_highlighted_cards
+Entropy.blind_is = Spectrallib.blind_is
 
 -- Hook for Axeh's effect
 local splib_calcascmod_ref = Spectrallib.calculate_ascension_modification

@@ -21,7 +21,7 @@ end
 -- Checks if a value is contained in a table;<br>
 -- returns the index of said item if inside table.
 ---@param tbl any[]
----@param find_val fun(val: any): boolean | any If this is a function, the function checks each individual item in the table.
+---@param find_val any|(fun(val: any): boolean) If this is a function, the function checks each individual item in the table.
 ---@return integer|nil
 function Spectrallib.in_table(tbl, find_val)
     for i, value in ipairs(tbl) do
