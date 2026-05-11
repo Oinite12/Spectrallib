@@ -14,7 +14,7 @@ SMODS.current_mod.reset_game_globals = function (run_start)
             G.GAME.SuitBuffs[k] = { level = 1, chips = 0, mult = 0 }
         end
         G.GAME.SuitBuffs.suitless = { level = 1, chips = 0, mult = 0 }
-        
+
         -- Value Manipulation API
         Spectrallib.base_values = {}
     end
@@ -58,23 +58,23 @@ local files = {
     {path = "compat/misc"},
 
 }
-for i, v in pairs(files) do
-    if v.redirect then
-        _G[v.redirect] = _G[v.redirect] or {}
+for _, file_def in pairs(files) do
+    if file_def.redirect then
+        _G[file_def.redirect] = _G[file_def.redirect] or {}
         setmetatable(Spectrallib, {
             __newindex = function(table, key, value)
-            rawset(table, key, value)
-            if type(value) == "function" then
-                _G[v.redirect][key] = function (...)
-                    return Spectrallib[key](...)
+                rawset(table, key, value)
+                if type(value) == "function" then
+                    _G[file_def.redirect][key] = function (...)
+                        return Spectrallib[key](...)
+                    end
+                else
+                    _G[file_def.redirect][key] = value
                 end
-            else
-                _G[v.redirect][key] = value
-            end
             end
         })
     end
-    local file, err = SMODS.load_file(v.path..".lua")
-    if file then file() 
-    else error("Error in file: "..v.path.." "..err) end
+    local file, err = SMODS.load_file(file_def.path..".lua")
+    if file then file()
+    else error(("Error in file: %s %s"):format(file_def.path, err)) end
 end
