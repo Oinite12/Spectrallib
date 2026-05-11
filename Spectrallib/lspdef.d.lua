@@ -1,4 +1,5 @@
 ---@meta
+-- DO NOT LOAD! (There's nothing to load, anyways)
 
 ---@class SMODS.Blind
 ---@field before_play fun(self: SMODS.Blind|table) Calculates effects that occur before scoring a hand.

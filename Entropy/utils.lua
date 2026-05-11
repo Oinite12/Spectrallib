@@ -66,14 +66,14 @@ end
 
 -- Formats hyperoperators.
 ---@param arrows integer|string
----|-2               # Operator set to =
----|-1               # Operator set to +
----|"addition"       # Operator set to +
----|0                # Operator set to X
----|"multiplication" # Operator set to X
----|1                # From 1-6, operator set to ^ (repeats `arrow` times)
----|"exponent"       # Operator set to ^
----|7                # From 7 and higher or -3 and lower, operator set to {`arrow`}
+---| -2               # Operator set to =
+---| -1               # Operator set to +
+---| "addition"       # Operator set to +
+---| 0                # Operator set to X
+---| "multiplication" # Operator set to X
+---| 1                # From 1-6, operator set to ^ (repeats `arrow` times)
+---| "exponent"       # Operator set to ^
+---| 7                # From 7 and higher or -3 and lower, operator set to {`arrow`}
 ---@param mult number|string
 ---@return string
 function Spectrallib.format_arrow_mult(arrows, mult)
@@ -84,7 +84,6 @@ function Spectrallib.format_arrow_mult(arrows, mult)
     mult = type(mult) ~= "string" and number_format(mult) or mult
 
     local operator = ("{%s}"):format(arrows)
-
     if arrows == -2 then
         operator = "="
     elseif arrows == -1 then
@@ -103,15 +102,14 @@ Spectrallib.format_arrow_value = Spectrallib.format_arrow_mult
 -- Split a string into its characters.
 ---@param s string
 ---@return string[]
-function Spectrallib.stringsplit(s)
+function Spectrallib.stringsplit(str)
     local tbl = {}
-    for i = 1, #s do
-        table.insert(tbl, s:sub(i,i))
+    for i = 1, #str do
+        table.insert(tbl, str:sub(i,i))
     end
     return tbl
 end
 
-Spectrallib.charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~#$^~#$^~#$^~#$^~#$^"
 -- Generates a `length`-long string of random characters.
 ---@param length integer
 ---@param charset? string
@@ -135,7 +133,9 @@ end
 function Spectrallib.pythag(a, b)
     local a_X, a_Y = a[1], a[2]
     local b_X, b_Y = b[1], b[2]
-    return math.sqrt(((a_X - b_X) ^ 2) + ((a_Y - b_Y) ^ 2))
+    local x = a_X - b_X
+    local y = a_Y - b_Y
+    return math.sqrt((x^2) + (y^2))
 end
 
 -- Approximates a repeated application of the log function.
@@ -174,66 +174,49 @@ end
 ---@alias Spectrallib.flip_then.func fun(card: Card, cardlist: Card[], i: integer): any
 
 -- Double-flips cards in the provided list, and also run functions before, during, and after double-flipping.
----@param cardlist Card[]
+---@param cardlist IterableCardList
 ---@param func? {func: Spectrallib.flip_then.func, delay: number}[] | Spectrallib.flip_then.func The functions to run on a card between flips.
 ---@param before? fun(card: Card): any The function to run on a card before flipping once.
 ---@param after? fun(card: Card): any The function to run on a card after flipping again.
 ---@return nil
 function Spectrallib.flip_then(cardlist, func, before, after)
-    local skipanims = Spectrallib.should_skip_animations()
+    local skip_animations = Spectrallib.should_skip_animations()
     if type(func) ~= "table" then
         func = {{func = func, delay = 0.5}}
     end
 
-    for _,card in ipairs(cardlist) do
-        if not card then
-            -- Skip the following
-        elseif skipanims then
-            if before then before(card) end
-        else
-            G.E_MANAGER:add_event(Event({
-                trigger = "after",
-                delay = 0.4,
-                func = function()
-                    if before then before(card) end
-                    if card.flip then card:flip() end
+    for _,card in Spectrallib.iter.areacards(cardlist) do
+        Spectrallib.event {
+            function ()
+                if before then before(card) end
+                if not skip_animations then card:flip() end
+                return true
+            end,
+            delay = 0.4,
+            instant = skip_animations
+        }
+    end
+    for _,card in Spectrallib.iter.areacards(cardlist) do
+        for i, func_def in ipairs(func) do
+            Spectrallib.event {
+                function ()
+                    func_def.func(card, cardlist, i)
                     return true
-                end
-            }))
+                end,
+                delay = func_def.delay
+            }
         end
     end
-
-    for _,card in ipairs(cardlist) do
-        if card then
-            for i, func_def in ipairs(func) do
-                G.E_MANAGER:add_event(Event({
-                    trigger = "after",
-                    delay = func_def.delay,
-                    func = function()
-                        func_def.func(card, cardlist, i)
-                        return true
-                    end
-                }))
-            end
-        end
-    end
-
-    for _,card in ipairs(cardlist) do
-        if not card then
-            -- Skip the following
-        elseif skipanims then
-            if after then after(card) end
-        else
-            G.E_MANAGER:add_event(Event({
-                trigger = "after",
-                delay = 0.4,
-                func = function()
-                    if card.flip then card:flip() end
-                    if after then after(card) end
-                    return true
-                end
-            }))
-        end
+    for _,card in Spectrallib.iter.areacards(cardlist) do
+        Spectrallib.event {
+            function ()
+                if not skip_animations then card:flip() end
+                if after then after(card) end
+                return true
+            end,
+            delay = 0.4,
+            instant = skip_animations
+        }
     end
 end
 
@@ -299,7 +282,7 @@ function Spectrallib.get_dummy(center, area, from_card, silent)
     abil.extra_slots_used = abil.extra_slots_used or 0
 
     local eligible_editionless_jokers = {}
-    for _, joker in pairs(G.jokers and G.jokers.cards or {}) do
+    for _,joker in Spectrallib.iter.areacards(G.jokers) do
         if not joker.edition then
             eligible_editionless_jokers[#eligible_editionless_jokers + 1] = joker
         end
@@ -469,23 +452,15 @@ end
 ---@param required? string Key of the enhancement of cards to transform. If nil, all cards will be transformed.
 ---@return nil
 function Spectrallib.change_enhancements(areas, enhancement_key, required)
-    for i, area in pairs(areas) do
-        if not area.cards then 
-            areas[i] = {cards = {area}}
-        end
-    end
-
-    for _,area in pairs(areas) do
-        for _, card in pairs(area.cards) do
-            if not required or (card.config and card.config.center.key == required) then
-                if enhancement_key == "null" then
-                    card:start_dissolve()
-                elseif enhancement_key == "ccd" then
-                    -- Do nothing
-                else
-                    card:set_ability(G.P_CENTERS[enhancement_key])
-                    card:juice_up()
-                end
+    for card in Spectrallib.iter.areacards(areas) do
+        if not required or (card.config and card.config.center.key == required) then
+            if enhancement_key == "null" then
+                card:start_dissolve()
+            elseif enhancement_key == "ccd" then
+                -- Do nothing
+            else
+                card:set_ability(G.P_CENTERS[enhancement_key])
+                card:juice_up()
             end
         end
     end
@@ -943,7 +918,9 @@ end
 ---@param card Card
 ---@return integer|nil
 function Spectrallib.get_idx_in_area(card)
-    if card and card.area then
+    if not card then return end
+    if card.rank then return card.rank end
+    if card.area then
         for i, v in pairs(card.area.cards) do
             if v == card then return i end
         end
@@ -1189,7 +1166,7 @@ function Spectrallib.missing_ranks()
     end
 
     -- Strike out ranks that are being used
-    for _, card in pairs(G.playing_cards or {}) do
+    for card in Spectrallib.iter.areacards(G.playing_cards) do
         remaining_ranks[card.base.id] = nil
     end
 
@@ -1240,11 +1217,9 @@ end
 ---@return Card[]
 function Spectrallib.get_random_cards(areas, count, seed, cond)
     local cards = {}
-    for _, area in pairs(areas) do
-        for _, card in pairs(area.cards) do
-            if not cond or cond(card) then
-                table.insert(cards, card)
-            end
+    for card in Spectrallib.iter.areacards(areas) do
+        if not cond or cond(card) then
+            table.insert(cards, card)
         end
     end
 
@@ -1265,12 +1240,10 @@ function Spectrallib.count_stickers(extra_card)
     local cards = {}
     local add_self = true
 
-    for _, area in pairs({G.jokers, G.consumeables, G.hand, G.play, G.deck}) do
-        for _, card in pairs(area.cards) do
-            table.insert(cards, card)
-            if card == extra_card then
-                add_self = false
-            end
+    for card in Spectrallib.iter.areacards({G.jokers, G.consumeables, G.hand, G.play, G.deck}) do
+        table.insert(cards, card)
+        if card == extra_card then
+            add_self = false
         end
     end
     if add_self then

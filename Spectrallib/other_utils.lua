@@ -1,15 +1,17 @@
----@param ... string|string[]
+-- Check if a mod or list of mods (via their keys) can load.
+---@param ... string|string[] Mod key or mod keys.
 ---@return true|nil
 function Spectrallib.can_mods_load(...)
     local mods = {...}
     if type(mods[1]) == "table" then
-        mods = mods[1]
+        mods = mods[1] --[[@as string[] ]]
     end
-    for _,mod_key in pairs(mods --[[@as string[] ]]) do
+    for _,mod_key in pairs(mods) do
         if (SMODS.Mods[mod_key] or {}).can_load then return true end
     end
 end
 
+-- Check if an optional feature is enabled by *any* enabled mod.
 ---@param key string
 ---@return true|nil
 function Spectrallib.optional_feature(key)
@@ -22,6 +24,8 @@ function Spectrallib.optional_feature(key)
     end
 end
 
+---@param amt number
+---@return nil
 function Spectrallib.mod_score(amt) --good version
     G.SCORE_DISPLAY_QUEUE = G.SCORE_DISPLAY_QUEUE or {}
     local old = G.GAME.chips
@@ -29,6 +33,8 @@ function Spectrallib.mod_score(amt) --good version
     G.GAME.chips = amt
 end
 
+---@param amt number
+---@return nil
 function Spectrallib.mod_blindsize(amt) --good version
     G.BLIND_SIZE_DISPLAY_QUEUE = G.BLIND_SIZE_DISPLAY_QUEUE or {}
     table.insert(G.BLIND_SIZE_DISPLAY_QUEUE,amt)
@@ -137,6 +143,112 @@ function Spectrallib.redeem_animation(card, cfg)
         delay = 0.5
     }
 end
+
+---------------
+-- ITERATORS --
+---------------
+
+Spectrallib.iter = {}
+
+local blinds_warn = "[SPLIB.ITER.BLINDS] Blind %s is not defined!"
+local areacards_warn = "[SPLIB.ITER.AREACARDS] Cardlist %s is not a cardlist!"
+local areacards_warn_onelist = "[SPLIB.ITER.AREACARDS] Card %s is not a card!"
+local areacards_warn_manylist = "[SPLIB.ITER.AREACARDS] Card %s in cardlist %s is not a card!"
+
+-- Iterator function: On each blind key, return the blind prototype.
+---@param blind_keys string[] List of blind keys.
+---@return fun(): (SMODS.Blind|table|nil)
+function Spectrallib.iter.blinds(blind_keys)
+    local i = 0
+    return function ()
+        while true do
+            i = i + 1
+            if i > #blind_keys then return end
+            local blind_key = blind_keys[i]
+            local blind_proto = G.P_BLINDS[blind_key]
+            if blind_proto then
+                return blind_proto
+            else
+                sendWarnMessage(blinds_warn:format(blind_key))
+            end
+        end
+    end
+end
+
+---@alias IterableCardList Card[]|Card[][]|CardArea|CardArea[] Can be iterated by Spectrallib.iter.areacards
+
+-- Iterator function: Iterate through each card in each collection of cards.
+---@param areas IterableCardList
+---| `CardArea[]` # Iterate through each CardArea, to iterate through each card in each `cards` property
+---| `CardArea`   # Iterate through each card in the `cards` property
+---| `Card[][]`   # Iterate through each list of cards, to iterate through each card
+---| `Card[]`     # Iterate through each card
+---@return fun(): (Card|table|nil)
+function Spectrallib.iter.areacards(areas)
+    if type(areas) ~= "table" then return function () end end
+
+    local card_i = 0
+    local cardlist
+    if getmetatable(areas[1]) == Card then
+        cardlist = areas
+    elseif getmetatable(areas) == CardArea then
+        cardlist = areas.cards
+    elseif #areas == 0 then
+        return function () end
+    end
+
+    -- Simple case: Input is a cardlist
+    if cardlist ~= nil then
+        return function ()
+            while true do
+                card_i = card_i + 1
+                if card_i > #cardlist then return end
+                local card = cardlist[card_i]
+                if getmetatable(card) == Card then
+                    return card
+                else
+                    sendWarnMessage(areacards_warn_onelist:format(card_i))
+                end
+            end
+        end
+    end
+
+    -- Complex case: Input is a list of cardlists
+    local area_i = 0
+    return function()
+        while true do
+            while cardlist == nil do
+                area_i = area_i + 1
+                if area_i > #areas then return end -- Halt
+                local target = areas[area_i]
+                if getmetatable(target) == CardArea then
+                    cardlist = target.cards
+                elseif type(target) == "table" then
+                    cardlist = target
+                else
+                    sendWarnMessage(areacards_warn:format(area_i))
+                end
+                if #cardlist <= 0 then cardlist = nil end
+            end
+            card_i = card_i + 1
+            if card_i > #cardlist then
+                card_i = 0
+                cardlist = nil
+            else
+                local card = cardlist[card_i]
+                if getmetatable(card) == Card then
+                    return card -- Halt
+                else
+                    sendWarnMessage(areacards_warn_manylist:format(card_i, area_i))
+                end
+            end
+        end
+    end
+end
+
+-----------
+-- HOOKS --
+-----------
 
 --allow selecting multiple jokers/consumables. should probably go elsewhere but since this is pretty generically useful to a lot of features idk where it would go
 local start_run_ref = Game.start_run

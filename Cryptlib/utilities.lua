@@ -58,28 +58,14 @@ function Card:is_food()
 	return false
 end
 
--- todo: figure this out
--- Check G.GAME as well as joker info for banned keys
+-- Checks if the key `"no_"..m` is defined in a card's center,
+-- or if the card's center's key is a key in the table `G.GAME[m]` and assigned to a truthy value.
+---@param m string
+---@param no_no boolean
+---@return boolean|nil
 function Card:no(m, no_no)
 	if no_no then
-		-- Infinifusion Compat
-		if self.infinifusion then
-			for i = 1, #self.infinifusion do
-				if
-					G.P_CENTERS[self.infinifusion[i].key][m]
-					or (G.GAME and G.GAME[m] and G.GAME[m][self.infinifusion[i].key])
-				then
-					return true
-				end
-			end
-			return false
-		end
-		if not self.config then
-			--assume this is from one component of infinifusion
-			return G.P_CENTERS[self.key][m] or (G.GAME and G.GAME[m] and G.GAME[m][self.key])
-		end
-
-		return self.config.center[m] or (G.GAME and G.GAME[m] and G.GAME[m][self.config.center_key]) or false
+		return self.config.center[m] or Spectrallib.safe_get(G.GAME, m, self.config.center_key) or false --[[@as boolean|nil]]
 	end
 	return Card.no(self, "no_" .. m, true)
 end
@@ -455,19 +441,15 @@ function Spectrallib.get_highlighted_cards(areas, ignore, min, max, blacklist, s
 	end
 
 	local highlighted_cards = {}
-	for _, area in pairs(areas) do
-		if area.cards then
-			for _, card in pairs(area.cards) do
-				if (
-					card ~= ignore
-					and blacklist(card)
-					and (card.highlighted or G.cry_force_use)
-					and not card.checked
-				) then
-					table.insert(highlighted_cards, card)
-					card.checked = true
-				end
-			end
+	for card in Spectrallib.iter.areacards(areas) do
+		if (
+			card ~= ignore
+			and blacklist(card)
+			and (card.highlighted or G.cry_force_use)
+			and not card.checked
+		) then
+			table.insert(highlighted_cards, card)
+			card.checked = true
 		end
 	end
 	for _, card in ipairs(highlighted_cards) do
@@ -613,20 +595,17 @@ function Spectrallib.advanced_find_joker(name, rarity, edition, ability, non_deb
 
 	-- Card check process
 	local found_cards = {}
-	local function filter_check_card(card, cardlist)
+	local function filter_check_card(card)
 		if not (non_debuff or not card.debuff) then return end
-
 		local satisfied_filter_count = 0
 
 		if name and card.ability.name == name then
 			satisfied_filter_count = satisfied_filter_count + 1
 		end
-
-		if Spectrallib.safe_get(card.edition, "key") == edition then
+		if edition and Spectrallib.safe_get(card, "edition", "key") == edition then
 			satisfied_filter_count = satisfied_filter_count + 1
 		end
-
-		if rarity and cardlist == G.jokers.card then
+		if rarity and card.area == G.jokers then
 			for _,rarity_key in ipairs(rarity) do
 				if card.config.center.rarity == rarity_key then
 					satisfied_filter_count = satisfied_filter_count + 1
@@ -634,7 +613,6 @@ function Spectrallib.advanced_find_joker(name, rarity, edition, ability, non_deb
 				end
 			end
 		end
-
 		if ability then
 			-- Assume ahead of time ability filter satisfied
 			satisfied_filter_count = satisfied_filter_count + 1
@@ -653,15 +631,15 @@ function Spectrallib.advanced_find_joker(name, rarity, edition, ability, non_deb
 	end
 
 	-- Begin checking cards
+	local cardlists = {}
 	if not area or area == "j" then
-		for _,card in ipairs(G.jokers.cards) do
-			filter_check_card(card, G.jokers.cards)
-		end
+		table.insert(cardlists, G.jokers)
 	end
 	if not area or area == "c" then
-		for _,card in ipairs(G.consumeables.cards) do
-			filter_check_card(card, G.consumeables.cards)
-		end
+		table.insert(cardlists, G.consumeables)
+	end
+	for card in Spectrallib.iter.areacards(cardlists) do
+		filter_check_card(card)
 	end
 
 	return found_cards

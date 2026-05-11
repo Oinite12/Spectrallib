@@ -13,6 +13,9 @@ Spectrallib.ConsumablePackBlacklist = {
     p_mupack_multipack5=true,
 }
 
+-- Used by string_random
+Spectrallib.charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890~#$^~#$^~#$^~#$^~#$^"
+
 -- Position -> Rarity key
 Spectrallib.RarityChecks = {1, 2, 3, 4}
 if Cryptid and Cryptid.memepack then --using legacy stuff to check for cryptid and not cryptlib

@@ -1,17 +1,6 @@
--- Iterator function: On each blind key, return the blind prototype.
----@param blind_keys string[] List of blind keys.
----@return fun(): (SMODS.Blind|table)
-local function blinditer(blind_keys)
-    local i = 0
-    return function ()
-        i = i + 1
-        if i <= #blind_keys then
-            local blind_key = blind_keys[i]
-            local blind_proto = G.P_BLINDS[blind_key]
-            return blind_proto
-        end --[[@diagnostic disable-line missing-return]]
-    end
-end
+------------------------------------
+--#region SUPPLEMENTARY FUNCTIONS --
+------------------------------------
 
 function Spectrallib.return_to_deck()
 
@@ -19,11 +8,6 @@ end
 
 function Spectrallib.get_bg_colour()
     return G.C.BLIND['Small']
-end
-
-function Spectrallib.blind_is(blind)
-    if G.GAME.blind and G.GAME.blind.config and G.GAME.blind.config.blind.key == blind then return true end
-    if Spectrallib.in_table(Spectrallib.get_copied_blinds(G.GAME.blind), blind) then return true end
 end
 
 -- Get text associated with the blind.
@@ -106,9 +90,12 @@ function Spectrallib.get_debuff_text(blind_key, active_blind)
     return disp_text
 end
 
-------------------------
---#region NEW METHODS --
-------------------------
+--#endregion
+------------------------------------
+
+------------------------------
+--#region NEW BLIND METHODS --
+------------------------------
 
 -- Evaluate effects that a blind causes before scoring a hand.
 ---@return nil
@@ -193,11 +180,69 @@ function Blind:cap_final_score(score)
 end
 
 --#endregion
-------------------------
+------------------------------
+
+--------------------------------
+--#region BLIND-RELATED HOOKS --
+--------------------------------
+
+local upd = Game.update
+function Game:update(dt)
+	upd(self, dt)
+    -- TODO:
+    -- Similar code in Cryptid (Game:update hook, lib/overrides.lua) has:
+    -- local choices = {"Small", "Big", "Boss"}; for _,c in pairs(choices) do .. end
+    -- but idk if that's what we want here??? -Oinite
+    if G.GAME.blind then
+        if (
+            G.GAME.round_resets.blind_states[c] ~= "Defeated"
+            and not G.GAME.blind.disabled
+            and G.GAME.chips < G.GAME.blind.chips
+            and G.GAME.blind:ante_base_mod(dt) > 0
+        ) then
+            G.GAME.blind.chips = (
+                G.GAME.blind.chips
+                + G.GAME.blind:ante_base_mod(dt)
+                * get_blind_amount(G.GAME.round_resets.ante)
+                * G.GAME.starting_params.ante_scaling
+            )
+            G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
+        end
+
+        if (
+            G.GAME.round_resets.blind_states[c] == "Current"
+            and G.GAME
+            and G.GAME.blind
+            and not G.GAME.blind.disabled
+            and to_big(G.GAME.chips) < to_big(G.GAME.blind.chips)
+            and (G.GAME.blind:round_base_mod(dt) or 0) > 0
+        ) then
+            G.GAME.blind.chips = (
+                G.GAME.blind.chips
+                * (G.GAME.blind.round_base_mod and G.GAME.blind:round_base_mod(dt) or 1)
+            )
+            G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
+        end
+    end
+end
+
+local score_ref = SMODS.calculate_round_score
+function SMODS.calculate_round_score(...)
+    local score = score_ref(...)
+    if G.GAME.blind then
+        score = G.GAME.blind:cap_final_score(score)
+    end
+    return score
+end
+
+--#endregion
+--------------------------------
 
 -----------------------------------
 --#region COPIED BLIND FUNCTIONS --
 -----------------------------------
+
+local blinditer = Spectrallib.iter.blinds
 
 -- Get a list of keys of the blinds that a certain blind is copying.
 ---@param blind Blind
@@ -230,6 +275,14 @@ function Spectrallib.get_copied_blinds(blind, proto)
     end
 
     return copied_blind_keys
+end
+
+-- Check if a blind (via its key) is in active effect (including as a copy).
+---@param blind string The blind's key.
+---@return true|nil
+function Spectrallib.blind_is(blind)
+    if Spectrallib.safe_get(G.GAME.blind, "config", "blind", "key") == blind then return true end
+    if Spectrallib.in_table(Spectrallib.get_copied_blinds(G.GAME.blind), blind) then return true end
 end
 
 -- Run the `set_blind` method on a list of copied blinds.
@@ -784,54 +837,9 @@ end
 --#endregion
 -------------------------------
 
-local upd = Game.update
-function Game:update(dt)
-	upd(self, dt)
-    -- TODO:
-    -- Similar code in Cryptid (Game:update hook, lib/overrides.lua) has:
-    -- local choices = {"Small", "Big", "Boss"}; for _,c in pairs(choices) do .. end
-    -- but idk if that's what we want here??? -Oinite
-    if G.GAME.blind then
-        if (
-            G.GAME.round_resets.blind_states[c] ~= "Defeated"
-            and not G.GAME.blind.disabled
-            and G.GAME.chips < G.GAME.blind.chips
-            and G.GAME.blind:ante_base_mod(dt) > 0
-        ) then
-            G.GAME.blind.chips = (
-                G.GAME.blind.chips
-                + G.GAME.blind:ante_base_mod(dt)
-                * get_blind_amount(G.GAME.round_resets.ante)
-                * G.GAME.starting_params.ante_scaling
-            )
-            G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
-        end
-
-        if (
-            G.GAME.round_resets.blind_states[c] == "Current"
-            and G.GAME
-            and G.GAME.blind
-            and not G.GAME.blind.disabled
-            and to_big(G.GAME.chips) < to_big(G.GAME.blind.chips)
-            and (G.GAME.blind:round_base_mod(dt) or 0) > 0
-        ) then
-            G.GAME.blind.chips = (
-                G.GAME.blind.chips
-                * (G.GAME.blind.round_base_mod and G.GAME.blind:round_base_mod(dt) or 1)
-            )
-            G.GAME.blind.chip_text = number_format(G.GAME.blind.chips)
-        end
-    end
-end
-
-local score_ref = SMODS.calculate_round_score
-function SMODS.calculate_round_score(...)
-    local score = score_ref(...)
-    if G.GAME.blind then 
-        score = G.GAME.blind:cap_final_score(score)
-    end
-    return score
-end
+----------------------------
+--#region COPIED BLIND UI --
+----------------------------
 
 function _G.info_queue_copied(key)
     local width = 6
@@ -842,14 +850,12 @@ function _G.info_queue_copied(key)
     for _, v in ipairs(desc_nodes) do
         desc[#desc+1] = {n=G.UIT.R, config={align = "cm"}, nodes=v}
     end
-    return 
+    return
     {n=G.UIT.R, config={align = "cm", colour = G.P_BLINDS[key].boss_colour or lighten(G.C.GREY, 0.4), r = 0.1, padding = 0.05}, nodes={
         {n=G.UIT.R, config={align = "cm", padding = 0.05, r = 0.1}, nodes = localize{type = 'name', key = key, set = "Blind", name_nodes = {}, vars = {}}},
         {n=G.UIT.R, config={align = "cm", maxw = 3.75, minh = 0.4, r = 0.1, padding = 0.05, colour = desc_nodes.background_colour or G.C.WHITE}, nodes={{n=G.UIT.R, config={align = "cm", padding = 0.03}, nodes=desc}}}
     }}
 end
-
-Spectrallib.max_blind_infoqueues = 5
 
 function _G.create_UIBox_blind_info_queue(blind)
     local q_lines = {}
@@ -870,31 +876,35 @@ function _G.create_UIBox_blind_info_queue(blind)
     }}
 end
 
+Spectrallib.max_blind_infoqueues = 5
 local blind_hoverref = Blind.hover
-function Blind.hover(self)
-    if not G.CONTROLLER.dragging.target or G.CONTROLLER.using_touch then 
-        if not self.hovering and self.states.visible and self.children.animatedSprite.states.visible then
-            if next(Spectrallib.get_copied_blinds(self)) then
-                G.blind_info_queue = UIBox{
-                    definition = create_UIBox_blind_info_queue(self),
-                    config = {
-                        major = self,
-                        parent = nil,
-                        offset = {
-                            x = 0.15,
-                            y = 0.2 + 0.38*math.min(#Spectrallib.get_copied_blinds(self),Spectrallib.max_blind_infoqueues),
-                        },  
-                        type = "cr",
-                    }
-                }
-                G.blind_info_queue.attention_text = true
-                G.blind_info_queue.states.collide.can = false
-                G.blind_info_queue.states.drag.can = false
-                if self.children.alert then
-                    self.children.alert:remove()
-                    self.children.alert = nil
-                end
-            end
+function Blind:hover()
+    local copied_blinds = Spectrallib.get_copied_blinds(self)
+    if (
+        (not G.CONTROLLER.dragging.target or G.CONTROLLER.using_touch)
+        and not self.hovering
+        and self.states.visible
+        and self.children.animatedSprite.states.visible
+        and next(copied_blinds)
+    ) then
+        G.blind_info_queue = UIBox{
+            definition = create_UIBox_blind_info_queue(self),
+            config = {
+                major = self,
+                parent = nil,
+                offset = {
+                    x = 0.15,
+                    y = 0.2 + 0.38*math.min(#copied_blinds, Spectrallib.max_blind_infoqueues),
+                },
+                type = "cr",
+            }
+        }
+        G.blind_info_queue.attention_text = true
+        G.blind_info_queue.states.collide.can = false
+        G.blind_info_queue.states.drag.can = false
+        if self.children.alert then
+            self.children.alert:remove()
+            self.children.alert = nil
         end
     end
     blind_hoverref(self)
@@ -908,3 +918,6 @@ function Blind.stop_hover(self)
     end
     blind_stop_hoverref(self)
 end
+
+--#endregion
+----------------------------
