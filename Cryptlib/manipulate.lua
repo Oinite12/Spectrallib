@@ -71,12 +71,17 @@ function Spectrallib.log_random(seed, min, max)
 end
 
 ---@class Spectrallib.manipulate.args
----@field min? number
----@field max? number
----@field type? string
----@field value? number
----@field func? fun(num: number, args: table, is_big?: boolean, num_key: any)
----@field dont_stack? boolean
+---Used in conjunction with `type`.
+---It should be the annotated table if `type == "hyper"`.
+---If not provided, a random value is determined with `Spectrallib.log_random`.
+---@field value? number|{arrows: number, height: number}
+---@field type? Spectrallib.ManipulateType How `value` is incorporated into the value.
+---@field min? number Min for `Spectrallib.log_random`.
+---@field max? number Max for `Spectrallib.log_random`.
+---@field seed? string|any Used to generate a seed for `Spectrallib.log_random`.
+---Iterated over each value, overriding Spectrallib.manipulate_value.
+---@field func? fun(tbl_value: number, args: table|Spectrallib.manipulate.args, is_big: boolean, value_key: string): number
+---@field dont_stack? boolean If true, each table value is temporarily reset before manipulation.
 ---@field no_deck_effects? boolean
 ---@field bypass_checks? boolean
 
@@ -84,7 +89,7 @@ end
 ---`func` takes priority over all other arguments and returns the new value.
 ---`min` and `max` can be set to use a logarithmically distributed random value as the amount, else `value` will be used.
 ---@param card table|Card
----@param args table|Spectrallib.manipulate.args
+---@param args? table|Spectrallib.manipulate.args
 ---@return boolean|nil
 function Spectrallib.manipulate(card, args)
 	if not card or not card.config or not card.config.center then return end
@@ -194,7 +199,7 @@ end
 ---@param card Card
 ---@param ref_table table
 ---@param ref_value string|any
----@param args table|{big?: boolean, dont_stack?: boolean}
+---@param args table|Spectrallib.manipulate.args
 ---@return nil
 function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 	if ref_value == "consumeable" then return end
@@ -207,7 +212,6 @@ function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 			and Spectrallib.misprintize_value_blacklist[tbl_key] ~= false
 		then
 			-- Determine which value to manipulate
-			local new_value = tbl_value
 			if (
 				args.dont_stack
 				and base_values
@@ -216,14 +220,14 @@ function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 					or (ref_value == "ability" and base_values[tbl_key .. "consumeable"])
 				)
 			) then
-				new_value = base_values[tbl_key .. ref_value] or base_values[tbl_key .. "consumeable"]
+				tbl_value = base_values[tbl_key .. ref_value] or base_values[tbl_key .. "consumeable"]
 			end
 
 			-- Proceed to manipulation
 			if args.big ~= nil then
-				ref_table[ref_value][tbl_key] = Spectrallib.manipulate_value(new_value, args, args.big, tbl_key)
+				ref_table[ref_value][tbl_key] = Spectrallib.manipulate_value(tbl_value, args, args.big, tbl_key)
 			else
-				ref_table[ref_value][tbl_key] = Spectrallib.manipulate_value(new_value, args, Spectrallib.is_card_big(card), tbl_key)
+				ref_table[ref_value][tbl_key] = Spectrallib.manipulate_value(tbl_value, args, Spectrallib.is_card_big(card), tbl_key)
 			end
 		elseif (
 			tbl_key ~= "immutable"
@@ -235,25 +239,18 @@ function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 	end
 end
 
----@class Spectrallib.manipulate_value.args
----@field func? function
----@field min? number
----@field max? number
----@field seed? string|any
----@field type? "+"|"X"|"^"|"hyper"
----@field value? number|{arrows: number, height: number}
-
 -- Calculate the manipulation of a given value.
----@param num number
----@param args table
+---@param tbl_value number
+---@param args table|Spectrallib.manipulate.args
 ---@param is_big boolean
----@param num_key string
-function Spectrallib.manipulate_value(num, args, is_big, num_key)
-	if not Spectrallib.is_number(num) then return end
+---@param value_key string
+---@return number|nil
+function Spectrallib.manipulate_value(tbl_value, args, is_big, value_key)
+	if not Spectrallib.is_number(tbl_value) then return end
 
 	-- Calculate new value
 	if args.func then
-		num = args.func(num, args, is_big, num_key)
+		tbl_value = args.func(tbl_value, args, is_big, value_key)
 	else
 		local new_num
 		if args.min and args.max then
@@ -263,31 +260,31 @@ function Spectrallib.manipulate_value(num, args, is_big, num_key)
 			local operand = Spectrallib.log_random(seed, big_min, big_max)
 			new_num = (
 				Spectrallib.manipulate_types[args.type]
-				and Spectrallib.manipulate_types[args.type](num, operand, num_key)
+				and Spectrallib.manipulate_types[args.type](tbl_value, operand, value_key)
 				or nil
 			)
 		elseif args.value then
 			new_num = (
-				Spectrallib.manipulate_types[args.type]
-				and Spectrallib.manipulate_types[args.type](num, args.value, num_key)
+				type(Spectrallib.manipulate_types[args.type]) == "function"
+				and Spectrallib.manipulate_types[args.type](tbl_value, args, is_big, value_key)
 				or nil
 			)
 		end
-		if new_num then num = new_num end
+		if new_num then tbl_value = new_num end
 	end
 
 	-- Place cap on new value
-	if Spectrallib.misprintize_value_cap[num_key] then
-		num = math.min(num, Spectrallib.misprintize_value_cap[num_key])
+	if Spectrallib.misprintize_value_cap[value_key] then
+		tbl_value = math.min(tbl_value, Spectrallib.misprintize_value_cap[value_key])
 	end
 
 	-- Prevent blacklisted keys from being BigNum
-	if Spectrallib.misprintize_bignum_blacklist[num_key] == false then
-		num = to_number(num)
-		return to_number(Spectrallib.sanity_check(num, false))
+	if Spectrallib.misprintize_bignum_blacklist[value_key] == false then
+		tbl_value = to_number(tbl_value)
+		return to_number(Spectrallib.sanity_check(tbl_value, false))
 	end
 
-	local val = Spectrallib.sanity_check(num, is_big)
+	local val = Spectrallib.sanity_check(tbl_value, is_big)
 	if -1e100 < val and val < 1e100 then
 		return to_number(val)
 	end

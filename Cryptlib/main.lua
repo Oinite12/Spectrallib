@@ -44,36 +44,41 @@ Spectrallib.ascension_numbers = {
 	["Flush Five"]      = 5,
 }
 
+---@alias Spectrallib.ManipulateType string
+---| "+" Arg value is added to original value
+---| "X" Arg value is multiplied with the original value
+---| "^" Original value is raised to the power of arg value
+---| "hyper" Original value is raised to the hyperpower of arg value (which should be a BigNumber)
+
 -- Manipulation types
----@type {[string]: fun(initial: number, operand: number|{arrows: number, height: number}, value_key: string): number|nil}
+---@type {[string|Spectrallib.ManipulateType]: fun(tbl_value: number, args: table|Spectrallib.manipulate.args, is_big: boolean, value_key: string): (number|nil)}
 Spectrallib.manipulate_types = {
-	["+"] = function (initial, operand, value_key)
-        if not Spectrallib.is_number(operand) then return end
-		if initial ~= 0 and initial ~= 1 then
-			return initial + operand
+	["+"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		if tbl_value ~= 0 and tbl_value ~= 1 then
+			return tbl_value + args.value
 		end
 	end,
-	["X"] = function (initial, operand, value_key)
-        if not Spectrallib.is_number(operand) then return end
-		if initial ~= 0 and (initial ~= 1 or (value_key ~= "x_chips" and value_key ~= "xmult")) then
-			return initial * operand
+	["X"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		if tbl_value ~= 0 and (tbl_value ~= 1 or (value_key ~= "x_chips" and value_key ~= "xmult")) then
+			return tbl_value * args.value
 		end
 	end,
-	["^"] = function (initial, operand, value_key)
-        if not Spectrallib.is_number(operand) then return end
-		return initial ^ operand
+	["^"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		return tbl_value ^ args.value
 	end,
-	["hyper"] = function (initial, operand, value_key)
+	["hyper"] = function (tbl_value, args, is_big, value_key)
 		if (
-            Spectrallib.can_mods_load("Talisman")
-			and type(operand) == table
-			and operand.arrows
-			and operand.height
+			Spectrallib.can_mods_load("Talisman")
+			and type(args.value) == "table"
+			and args.value.arrows and args.value.height
 		) then
-			initial = to_big(initial)
-			local arrows = operand.arrows
-			local height = to_big(operand.height)
-			return initial:arrow(arrows, height)
+			tbl_value = to_big(tbl_value)
+			local arrows = args.value.arrows
+			local height = to_big(args.value.height)
+			return tbl_value:arrow(arrows, height)
 		end
-	end
+	end,
 }
