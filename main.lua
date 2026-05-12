@@ -17,6 +17,8 @@ SMODS.current_mod.reset_game_globals = function (run_start)
 
         -- Value Manipulation API
         Spectrallib.base_values = {}
+        ---@type string[] List of deck keys. 
+        G.GAME.entr_bought_decks = {}
     end
 end
 
