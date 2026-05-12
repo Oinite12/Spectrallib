@@ -1,5 +1,3 @@
-local sp_Event = Spectrallib.event
-
 -- How deck config keys should be handled
 -- `deck_center` is the prototype of the deck being redeemed, `value` is the value associated with the config key under `deck_center`
 ---@type {[string]: fun(deck_center: SMODS.Center, value: any)}
@@ -25,8 +23,8 @@ Spectrallib.deck_config_apply_effects = {
         G.GAME.spectral_rate = value
     end,
     jokers = function (deck_center, value)
-        sp_Event(0.4)
-        sp_Event(function ()
+        Spectrallib.event(0.4)
+        Spectrallib.event(function ()
             for _, joker_key in pairs(deck_center.jokers) do
                 SMODS.add_card{
                     set = 'Joker',
@@ -41,14 +39,14 @@ Spectrallib.deck_config_apply_effects = {
     voucher = function (deck_center, value)
         G.GAME.used_vouchers[deck_center.config.voucher] = true
         G.GAME.starting_voucher_count = (G.GAME.starting_voucher_count or 0) + 1
-        sp_Event(function ()
+        Spectrallib.event(function ()
             Card.apply_to_run(nil, G.P_CENTERS[deck_center.config.voucher])
             return true
         end)
     end,
     consumables = function (deck_center, value)
-        sp_Event(0.4)
-        sp_Event(function ()
+        Spectrallib.event(0.4)
+        Spectrallib.event(function ()
             for _,consumable_key in pairs(deck_center.config.consumables) do
                 SMODS.add_card{
                     set = 'Tarot',
@@ -63,7 +61,7 @@ Spectrallib.deck_config_apply_effects = {
         for _,voucher_key in pairs(deck_center.config.vouchers) do
             G.GAME.used_vouchers[voucher_key] = true
             G.GAME.starting_voucher_count = (G.GAME.starting_voucher_count or 0) + 1
-            sp_Event(function ()
+            Spectrallib.event(function ()
                 Card.apply_to_run(nil, G.P_CENTERS[voucher_key])
                 return true
             end)

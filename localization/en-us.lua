@@ -136,6 +136,9 @@ return {
 
 			k_level_chips = "Chips per level",
 			k_level_mult = "Mult per level",
+
+			ph_no_decks = "No decks bought this run",
+			ph_decks_bought = "Decks bought this run",
         },
         v_dictionary = {
         	a_xchips = "X#1# Chips",
