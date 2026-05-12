@@ -11,7 +11,7 @@ SMODS.Sound({
 -- Determines whether a card is forcetriggerable.
 ---@param card Card
 ---@return [ boolean ]
-function Spectrallib.demicolonGetTriggerable(card)
+function Spectrallib.card_is_forcetriggerable(card)
 	local is_triggerable = { false } -- Used to have another boolean, hence table - not sure why
 	if not card then return is_triggerable end
 
@@ -33,6 +33,7 @@ function Spectrallib.demicolonGetTriggerable(card)
 
 	return is_triggerable
 end
+Spectrallib.demicolonGetTriggerable = Spectrallib.card_is_forcetriggerable
 
 local calc_ref = Card.calculate_joker
 function Card:calculate_joker(...)
@@ -169,12 +170,12 @@ function Spectrallib.get_forcetrigger_results(card, context)
 end
 
 ---@class Spectrallib.forcetrigger.args
----@field context? table Has `context.forcetrigger == true`.
 ---@field card? Card The card to perform the forcetrigger on.
----@field silent? boolean If true, hides message.
----@field message? string
----@field colour? [number, number, number, number] Message color.
+---@field context? table
+---@field message? string Defaults to the localization of "Forcetrigger!"
 ---@field message_card? Card The card to display the forcetrigger message; may be distinct from `card`.
+---@field colour? [number, number, number, number] Message color.
+---@field silent? boolean If true, hides message.
 
 ---Forcetriggers a given card and calculates returned effects.
 ---@param args Spectrallib.forcetrigger.args|table
