@@ -1,4 +1,4 @@
--- Redeem the deck/sleeve.
+-- Apply the effects of a redeemed deck/sleeve.
 ---@param e Card
 ---@return nil
 G.FUNCS.buy_deckorsleeve = function(e)
