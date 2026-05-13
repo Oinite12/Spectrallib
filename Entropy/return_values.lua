@@ -116,19 +116,23 @@ local sp_mult_calc_hook = SMODS.Scoring_Parameters.mult.calc_effect
 SMODS.Scoring_Parameter:take_ownership('mult', {
     calc_effect = function(self, effect, scored_card, key, amount, from_edition)
         if eq_mult_aliases[key] then
+            if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
             self:modify(amount - self.current)
             if not Spectrallib.should_skip_animations() then
                 Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'mult', amount, percent, nil, nil, localize{ type = "variable", key = "a_eq_mult", vars = {amount}}, G.C.RED )
             end
+            return true
         end
         if key == "xlog_mult" then
+            if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
             local log = math.log(self.current < 0 and 1 or self.current, amount)
             self:modify(self.current*log - self.current)
             if not Spectrallib.should_skip_animations() then
                 Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'chips', 1, percent, nil, nil, "Mult Xlog(Mult)", G.C.RED, "multhit2", 0.6)
             end
+            return true
         end
-        return sp_mult_calc_hook
+        return sp_mult_calc_hook(self, effect, scored_card, key, amount, from_edition) --[[@diagnostic disable-line need-check-nil]]
     end
 }, true)
 
@@ -136,34 +140,32 @@ local sp_chips_calc_hook = SMODS.Scoring_Parameters.chips.calc_effect
 SMODS.Scoring_Parameter:take_ownership('chips', {
     calc_effect = function(self, effect, scored_card, key, amount, from_edition)
         if eq_chips_aliases[key] then
+            if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
             self:modify(amount - self.current)
             if not Spectrallib.should_skip_animations() then
                 Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'chips', amount, percent, nil, nil, localize{ type = "variable", key = "a_eq_chips", vars = {amount}}, G.C.BLUE)
             end
+            return true
         end
         if key == "xlog_chips" then
+            if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
             local log = math.log(self.current < 0 and 1 or self.current, amount)
             self:modify(self.current*log - self.current)
             if not Spectrallib.should_skip_animations() then
                 Spectrallib.card_eval_status_text_eq(scored_card or effect.card or effect.focus, 'chips', 1, percent, nil, nil, "Chips Xlog(Chips)", G.C.BLUE, "slib_xlog_chips", 0.6) --janky compat hack
             end
+            return true
         end
-        return sp_chips_calc_hook
+        return sp_chips_calc_hook(self, effect, scored_card, key, amount, from_edition) --[[@diagnostic disable-line need-check-nil]]
     end
 }, true)
 
--- eq_X_aliases is not used further as is after this, so this re-declaration is fine
-local mult_keys  = eq_mult_aliases
-local chips_keys = eq_chips_aliases
-mult_keys["xlog_mult"]   = true
-chips_keys["xlog_chips"] = true
-
 -- todo: unsure if adding to SMODS.Scoring_Parameter_Calculation is redundant, please check
-for key in pairs(mult_keys) do
+for _,key in ipairs({'eq_mult', 'Eqmult_mod', 'xlog_mult'}) do
     table.insert(SMODS.Scoring_Parameters.mult.calculation_keys, key)
     SMODS.Scoring_Parameter_Calculation[key] = "mult"
 end
-for key in pairs(chips_keys) do
+for _,key in ipairs({'eq_chips', 'Eqchips_mod', 'xlog_chips'}) do
     table.insert(SMODS.Scoring_Parameters.chips.calculation_keys, key)
     SMODS.Scoring_Parameter_Calculation[key] = "chips"
 end
