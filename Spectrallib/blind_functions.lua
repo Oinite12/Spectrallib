@@ -121,28 +121,14 @@ function Blind:after_play()
     Spectrallib.after_play_copied_blinds(Spectrallib.get_copied_blinds(self), self)
 end
 
--- hook to implement Blind:before_play
-local play_ref = G.FUNCS.play_cards_from_highlighted
-G.FUNCS.play_cards_from_highlighted = function(e, ...)
-    G.GAME.blind:before_play()
-	play_ref(e, ...)
-end
-
--- hook to implement Blind:after_play
-local gfep = G.FUNCS.evaluate_play
-function G.FUNCS.evaluate_play(e, ...)
-	gfep(e, ...)
-	G.GAME.blind:after_play()
-end
-
 
 function Blind:ante_base_mod(dt)
     local mod = 0
     if self.disabled then return mod end
 
-    local obj = self.config.blind
-    if obj.ante_base_mod and type(obj.ante_base_mod) == "function" then
-        mod = obj:ante_base_mod(dt)
+    local blind_proto = self.config.blind
+    if blind_proto.ante_base_mod and type(blind_proto.ante_base_mod) == "function" then
+        mod = blind_proto:ante_base_mod(dt)
     end
     for _, submod in pairs(Spectrallib.ante_base_mod_copied_blinds(Spectrallib.get_copied_blinds(self), self, dt)) do
         mod = mod * submod
@@ -154,9 +140,9 @@ function Blind:round_base_mod(dt)
     local mod = 1
     if self.disabled then return mod end
 
-    local obj = self.config.blind
-    if obj.round_base_mod and type(obj.round_base_mod) == "function" then
-        mod = obj:round_base_mod(dt)
+    local blind_proto = self.config.blind
+    if blind_proto.round_base_mod and type(blind_proto.round_base_mod) == "function" then
+        mod = blind_proto:round_base_mod(dt)
     end
     for _, submod in pairs(Spectrallib.round_base_mod_copied_blinds(Spectrallib.get_copied_blinds(self), self, dt)) do
         mod = mod * submod
@@ -167,12 +153,12 @@ end
 function Blind:cap_final_score(score)
     if self.disabled then return score end
 
-    local obj = self.config.blind
-    if obj.modify_score and type(obj.modify_score) == "function" then
-        score = obj:modify_score(score)
+    local blind_proto = self.config.blind
+    if blind_proto.modify_score and type(blind_proto.modify_score) == "function" then
+        score = blind_proto:modify_score(score)
     end
-    if obj.cap_score and type(obj.cap_score) == "function" then
-        score = obj:cap_score(score)
+    if blind_proto.cap_score and type(blind_proto.cap_score) == "function" then
+        score = blind_proto:cap_score(score)
     end
     -- todo: not sure if this is how to implement this function
     score = Spectrallib.cap_final_score_copied_blinds(Spectrallib.get_copied_blinds(self), self, score)
@@ -233,6 +219,20 @@ function SMODS.calculate_round_score(...)
         score = G.GAME.blind:cap_final_score(score)
     end
     return score
+end
+
+-- hook to implement Blind:before_play
+local play_ref = G.FUNCS.play_cards_from_highlighted
+G.FUNCS.play_cards_from_highlighted = function(e, ...)
+    G.GAME.blind:before_play()
+	play_ref(e, ...)
+end
+
+-- hook to implement Blind:after_play
+local gfep = G.FUNCS.evaluate_play
+function G.FUNCS.evaluate_play(e, ...)
+	gfep(e, ...)
+	G.GAME.blind:after_play()
 end
 
 --#endregion
@@ -877,7 +877,7 @@ function _G.create_UIBox_blind_info_queue(blind)
 end
 
 Spectrallib.max_blind_infoqueues = 5
-local blind_hoverref = Blind.hover
+local blind_hoverref = Blind.hoverante_base_mod
 function Blind:hover()
     local copied_blinds = Spectrallib.get_copied_blinds(self)
     if (
