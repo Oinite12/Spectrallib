@@ -877,7 +877,7 @@ function _G.create_UIBox_blind_info_queue(blind)
 end
 
 Spectrallib.max_blind_infoqueues = 5
-local blind_hoverref = Blind.hoverante_base_mod
+local blind_hoverref = Blind.hover
 function Blind:hover()
     local copied_blinds = Spectrallib.get_copied_blinds(self)
     if (
