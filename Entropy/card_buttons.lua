@@ -648,6 +648,14 @@ function Spectrallib.gather_button_config(center, card)
     return config
 end
 
+--- Returns whether or not a card should have `G.FUNCS.use_and_sell_buttons` run on it.
+--- Can be hooked to let card bypass `G.FUNCS.use_and_sell_buttons`
+--- @param card Card Card being checked.
+--- @return boolean
+function Spectrallib.should_have_use_and_sell_buttons(card)
+    return not (card and card.area == G.elle_resident_area)
+end
+
 local gfcfbs = G.FUNCS.check_for_buy_space
 G.FUNCS.check_for_buy_space = function(card)
 	if
