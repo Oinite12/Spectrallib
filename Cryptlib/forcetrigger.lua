@@ -1011,7 +1011,7 @@ end
 ---`message` and `colour` control the message displayed on `message_card`.
 ---`silent` prevents the message from being displayed.
 ---`context` holds additional context information and defaults to an empty table. `context.forcetrigger` will always be set to `true` when calculating the forcetrigger.
----@param args table|{context?: table, card: Card, silent?: boolean, message_card: Card, colour?: table, message?: string}
+---@param args table|{context?: table, card: Card, silent?: boolean, message_card?: Card, colour?: table, message?: string}
 function Spectrallib.forcetrigger(args)
 	args.context = args.context or {}
 	if Cryptid.demicolonGetTriggerable(args.card)[1] then
@@ -1025,7 +1025,7 @@ function Spectrallib.forcetrigger(args)
 			}))
 		end
 		if not args.silent then
-			SMODS.calculate_effect{card = args.context.blueprint_card or args.message_card, colour = args.context.blueprint_card and G.C.BLUE or args.colour or G.C.PURPLE, message = args.message or localize("slib_forcetrigger_ex")}
+			SMODS.calculate_effect{card = args.context.blueprint_card or args.message_card or args.card, colour = args.context.blueprint_card and G.C.BLUE or args.colour or G.C.PURPLE, message = args.message or localize("slib_forcetrigger_ex")}
 		end
 		local results = Spectrallib.get_forcetrigger_results(args.card, args.context)
 		if results and results.jokers then
