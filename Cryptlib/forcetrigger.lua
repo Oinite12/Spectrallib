@@ -196,7 +196,7 @@ function Spectrallib.forcetrigger(args)
 
 		if not args.silent then
 			SMODS.calculate_effect{
-				card = args.context.blueprint_card or args.message_card,
+				card = args.context.blueprint_card or args.message_card or args.card,
 				colour = args.context.blueprint_card and G.C.BLUE or args.colour or G.C.PURPLE,
 				message = args.message or localize("slib_forcetrigger_ex")
 			}
