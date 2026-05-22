@@ -163,8 +163,8 @@ end
 function Spectrallib.calculate_ascension_power(hand_name, hand_cards, hand_scoring_cards)
 	if not Spectrallib.ascension_power_enabled() then return 0 end
 
-	local starting_power = Spectrallib.calculate_starting_asc_power()
-	local bonus_power = (G.GAME.bonus_asc_power or 0) + Spectrallib.calculate_bonus_asc_power()
+	local starting_power = Spectrallib.calculate_starting_asc_power(hand_name, hand_cards, hand_scoring_cards)
+	local bonus_power = (G.GAME.bonus_asc_power or 0) + Spectrallib.calculate_bonus_asc_power(hand_name, hand_cards, hand_scoring_cards)
 
 	local final_power = math.max(0, starting_power + bonus_power)
 	-- Needed to avoid awkwardness from raising to power of <1
