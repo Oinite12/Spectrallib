@@ -96,20 +96,17 @@ function Spectrallib.calculate_bonus_asc_power(hand_name, hand_cards, hand_scori
         bonus_power = bonus_power + 1
     end
 
+    local sun_count = #SMODS.find_card("c_cry_sunplanet")
+    local perkele_count = #SMODS.find_card("c_cry_perkele")
+    local solperkele_count = sun_count + perkele_count
     -- Bonus from Sol/Perkele under Observatory
-    if (
-        G.GAME.used_vouchers.v_observatory
-        and (
-            next(SMODS.find_card("cry-sunplanet"))
-            or next(SMODS.find_card("cry-Perkele"))
-        )
-    ) then
-        local solperkele_count = #SMODS.find_card("cry-sunplanet") + #SMODS.find_card("cry-Perkele")
+    if G.GAME.used_vouchers.v_observatory and solperkele_count > 0 then
         if solperkele_count == 1 then
             bonus_power = bonus_power + 1
         else
-            local solperkele_bonus = Spectrallib.funny_log(2, solperkele_count + 1)
-            local solperkele_bonus_simple = Spectrallib.nuke_decimals(solperkele_bonus, 2)
+            -- Cryptid functions provided by, well, Cryptid
+            local solperkele_bonus = Cryptid.funny_log(2, solperkele_count + 1)
+            local solperkele_bonus_simple = Cryptid.nuke_decimals(solperkele_bonus, 2)
             bonus_power = bonus_power + solperkele_bonus_simple
         end
     end
