@@ -176,3 +176,41 @@ end
 
 --#endregion
 ----------------------
+
+-----------------------------
+--#region HAND DEFINITIONS --
+-----------------------------
+
+--Ascension numbers for Vanilla hands
+---@param x integer
+---@return fun(): integer|nil
+local function tether_check(x)
+    return function()
+        return Spectrallib.has_tether() and x or nil
+    end
+end
+local function straight_flush()
+	return (
+		next(SMODS.find_card("j_four_fingers"))
+		and Spectrallib.gameset() ~= "modest"
+		and 4
+		or 5
+	)
+end
+---@type { [string]: integer | fun():(integer|nil) }
+Spectrallib.ascension_numbers = {
+	["High Card"]       = tether_check(1),
+	["Pair"]            = tether_check(2),
+	["Three of a Kind"] = tether_check(3),
+	["Four of a Kind"]  = tether_check(4),
+	["Straight"]        = straight_flush,
+	["Flush"]           = straight_flush,
+	["Two Pair"]        = 4,
+	["Full House"]      = 5,
+	["Five of a Kind"]  = 5,
+	["Flush House"]     = 5,
+	["Flush Five"]      = 5,
+}
+
+--#endregion
+-----------------------------

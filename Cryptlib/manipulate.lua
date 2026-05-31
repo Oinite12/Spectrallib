@@ -239,6 +239,45 @@ function Spectrallib.manipulate_table(card, ref_table, ref_value, args)
 	end
 end
 
+---@alias Spectrallib.ManipulateType string
+---| "+" Arg value is added to original value
+---| "X" Arg value is multiplied with the original value
+---| "^" Original value is raised to the power of arg value
+---| "hyper" Original value is raised to the hyperpower of arg value (which should be a BigNumber)
+
+-- Manipulation types
+---@type {[string|Spectrallib.ManipulateType]: fun(tbl_value: number, args: table|Spectrallib.manipulate.args, is_big: boolean, value_key: string): (number|nil)}
+local manipulate_types = {
+	["+"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		if tbl_value ~= 0 and tbl_value ~= 1 then
+			return tbl_value + args.value
+		end
+	end,
+	["X"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		if tbl_value ~= 0 and (tbl_value ~= 1 or (value_key ~= "x_chips" and value_key ~= "xmult")) then
+			return tbl_value * args.value
+		end
+	end,
+	["^"] = function (tbl_value, args, is_big, value_key)
+		if not Spectrallib.is_number(args.value) then return end
+		return tbl_value ^ args.value
+	end,
+	["hyper"] = function (tbl_value, args, is_big, value_key)
+		if (
+			Spectrallib.can_mods_load("Talisman")
+			and type(args.value) == "table"
+			and args.value.arrows and args.value.height
+		) then
+			tbl_value = to_big(tbl_value)
+			local arrows = args.value.arrows
+			local height = to_big(args.value.height)
+			return tbl_value:arrow(arrows, height)
+		end
+	end,
+}
+
 -- Calculate the manipulation of a given value.
 ---@param tbl_value number
 ---@param args table|Spectrallib.manipulate.args
@@ -259,14 +298,14 @@ function Spectrallib.manipulate_value(tbl_value, args, is_big, value_key)
 			local big_max = to_big(args.max)
 			local operand = Spectrallib.log_random(seed, big_min, big_max)
 			new_num = (
-				Spectrallib.manipulate_types[args.type]
-				and Spectrallib.manipulate_types[args.type](tbl_value, operand, value_key)
+				manipulate_types[args.type]
+				and manipulate_types[args.type](tbl_value, operand, value_key)
 				or nil
 			)
 		elseif args.value then
 			new_num = (
-				type(Spectrallib.manipulate_types[args.type]) == "function"
-				and Spectrallib.manipulate_types[args.type](tbl_value, args, is_big, value_key)
+				type(manipulate_types[args.type]) == "function"
+				and manipulate_types[args.type](tbl_value, args, is_big, value_key)
 				or nil
 			)
 		end
