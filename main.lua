@@ -9,12 +9,6 @@ Spectrallib = {}
 
 SMODS.current_mod.reset_game_globals = function (run_start)
     if run_start then
-        G.GAME.SuitBuffs = {}
-        for k in pairs(SMODS.Suits) do
-            G.GAME.SuitBuffs[k] = { level = 1, chips = 0, mult = 0 }
-        end
-        G.GAME.SuitBuffs.suitless = { level = 1, chips = 0, mult = 0 }
-
         -- Value Manipulation API
         Spectrallib.base_values = {}
         ---@type string[] List of deck keys. 
@@ -22,6 +16,20 @@ SMODS.current_mod.reset_game_globals = function (run_start)
     end
 end
 
+local gigo = Game.init_game_object
+function Game:init_game_object()
+    local ret = gigo(self)
+    ret.SuitBuffs = {}
+    for k in pairs(SMODS.Suits) do
+        ret.SuitBuffs[k] = { level = 1, chips = 0, mult = 0 }
+    end
+    ret.SuitBuffs.suitless = { level = 1, chips = 0, mult = 0 }
+    return ret
+end
+--[[
+SMODS.current_mod.reset_game_globals = function (run_start)
+end
+]]
 local files = {
 
     {path = "Spectrallib/other_utils"},
