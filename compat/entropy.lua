@@ -1,3 +1,5 @@
+if not Spectrallib.can_mods_load({"entr"}) then return end
+
 Entropy.get_highlighted_cards = Spectrallib.get_highlighted_cards
 Entropy.blind_is = Spectrallib.blind_is
 

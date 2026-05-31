@@ -1,3 +1,5 @@
+if not Spectrallib.can_mods_load({"Cryptid"}) then return end
+
 -- Hook for EXPLOIT://-provided temporary Ascension power
 local gf_cryascui_ref = G.FUNCS.cry_asc_UI_set
 function G.FUNCS.cry_asc_UI_set(e)
@@ -137,15 +139,13 @@ ascnum["cry_Declare1"]    = declare_check(1)
 ascnum["cry_Declare2"]    = declare_check(2)
 
 -- Hook for contentset-activated Ascended Hands
-if Spectrallib.can_mods_load({"Cryptid"}) then
-    local splib_ascenable_ref = Spectrallib.ascension_power_enabled
-    function Spectrallib.ascension_power_enabled()
-        local ret = splib_ascenable_ref()
-        if not ret then
-            return Spectrallib.enabled("set_cry_poker_hand_stuff")
-        end
-        return ret
+local splib_ascenable_ref = Spectrallib.ascension_power_enabled
+function Spectrallib.ascension_power_enabled()
+    local ret = splib_ascenable_ref()
+    if not ret then
+        return Spectrallib.enabled("set_cry_poker_hand_stuff")
     end
+    return ret
 end
 
 -- Nostalgic Deck support for deck redeeming
