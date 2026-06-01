@@ -156,9 +156,12 @@ local areacards_warn_onelist = "[SPLIB.ITER.AREACARDS] Card %s is not a card!"
 local areacards_warn_manylist = "[SPLIB.ITER.AREACARDS] Card %s in cardlist %s is not a card!"
 
 -- Iterator function: On each blind key, return the blind prototype.
----@param blind_keys string[] List of blind keys.
+-- Can either input keys as separate args, or in a table in one single arg.
+---@param ... string|string[] List of blind keys.
 ---@return fun(): (SMODS.Blind|table|nil)
-function Spectrallib.iter.blinds(blind_keys)
+function Spectrallib.iter.blinds(...)
+    ---@diagnostic disable-next-line: param-type-mismatch
+    local blind_keys = #... == 1 and ... or {unpack(...)}
     local i = 0
     return function ()
         while true do
@@ -175,16 +178,16 @@ function Spectrallib.iter.blinds(blind_keys)
     end
 end
 
----@alias IterableCardList Card[]|Card[][]|CardArea|CardArea[] Can be iterated by Spectrallib.iter.areacards
+---@alias IterableCardList Card[]|CardArea Can be iterated by Spectrallib.iter.areacards
 
 -- Iterator function: Iterate through each card in each collection of cards.
----@param areas IterableCardList
----| `CardArea[]` # Iterate through each CardArea, to iterate through each card in each `cards` property
+-- Can either input keys as separate args, or in a table in one single arg.
+---@param ... IterableCardList|IterableCardList[]
 ---| `CardArea`   # Iterate through each card in the `cards` property
----| `Card[][]`   # Iterate through each list of cards, to iterate through each card
 ---| `Card[]`     # Iterate through each card
 ---@return fun(): (Card|table|nil)
-function Spectrallib.iter.areacards(areas)
+function Spectrallib.iter.areacards(...)
+    local areas = #... == 1 and ... or {unpack(...)}
     if type(areas) ~= "table" then return function () end end
 
     local card_i = 0

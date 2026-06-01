@@ -174,7 +174,7 @@ end
 ---@alias Spectrallib.flip_then.func fun(card: Card, cardlist: Card[], i: integer): any
 
 -- Double-flips cards in the provided list, and also run functions before, during, and after double-flipping.
----@param cardlist IterableCardList
+---@param cardlist IterableCardList[]
 ---@param func? {func: Spectrallib.flip_then.func, delay: number}[] | Spectrallib.flip_then.func The functions to run on a card between flips.
 ---@param before? fun(card: Card): any The function to run on a card before flipping once.
 ---@param after? fun(card: Card): any The function to run on a card after flipping again.
@@ -182,7 +182,7 @@ end
 function Spectrallib.flip_then(cardlist, func, before, after)
     local skip_animations = Spectrallib.should_skip_animations()
     if type(func) ~= "table" then
-        func = {{func = func, delay = 0.5}}
+        func = { {func = func, delay = 0.5} }
     end
 
     for _,card in Spectrallib.iter.areacards(cardlist) do
